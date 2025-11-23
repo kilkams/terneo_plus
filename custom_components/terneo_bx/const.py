@@ -1,0 +1,3 @@
+
+DOMAIN="terneo_bx"
+API_TIMEOUT=10

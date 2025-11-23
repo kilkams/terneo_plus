@@ -1,0 +1,10 @@
+
+{
+  "domain": "terneo_bx",
+  "name": "Terneo BX",
+  "version": "1.0.0",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "codeowners": ["@kilkams"],
+  "requirements": []
+}
