@@ -1,18 +1,18 @@
-
-from .const import DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from .const import DOMAIN, PLATFORMS
+from .coordinator import TerneoCoordinator
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
-        "host": entry.data["host"],
-        "serial": entry.data["serial"],
-    }
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    scan_interval = entry.options.get("scan_interval", entry.data.get("scan_interval", 20))
+    coordinator = TerneoCoordinator(hass, entry.data["host"], scan_interval=scan_interval)
+    await coordinator.async_config_entry_first_refresh()
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    await hass.config_entries.async_unload_platforms(entry, ["sensor"])
-    hass.data[DOMAIN].pop(entry.entry_id, None)
-    return True
+    coordinator = hass.data[DOMAIN].pop(entry.entry_id)
+    await coordinator.async_close()
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return unload_ok

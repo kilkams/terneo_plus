@@ -1,2 +1,1 @@
-# terneo_plus
-Terneo home assistant integration
+<PASTE README.MD CONTENT>
