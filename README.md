@@ -1,1 +1,2 @@
-<PASTE README.MD CONTENT>
+Привет мир.
+Моя первая интеграция для HA
