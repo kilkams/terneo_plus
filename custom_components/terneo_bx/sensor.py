@@ -1,69 +1,63 @@
-
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from .const import DOMAIN, API_TIMEOUT
-import async_timeout
-import json
+from homeassistant.helpers.entity import DeviceInfo
+from .const import DOMAIN
 
-async def _api_call(session, host, payload):
-    async with async_timeout.timeout(API_TIMEOUT):
-        r = await session.post(f"http://{host}/api.cgi", json=payload)
-        return await r.json()
+class TerneoRawPowerSensor(SensorEntity):
+    def __init__(self, coordinator, host):
+        self.coordinator = coordinator
+        self._host = host
+        self._attr_name = f"Terneo {host} Power"
+        self._attr_unique_id = f"terneo_{host}_power"
+        self._attr_native_unit_of_measurement = "W"
 
-async def async_setup_entry(hass, entry, async_add_entities):
-    data = hass.data[DOMAIN][entry.entry_id]
-    host = data["host"]
-    session = async_get_clientsession(hass)
-
-    async_add_entities([
-        TerneoPowerSensor(host, session),
-        TerneoTelemetrySensor(host, session)
-    ], True)
-
-class TerneoPowerSensor(SensorEntity):
-    _attr_name="Terneo Power"
-    _attr_native_unit_of_measurement="W"
-
-    def __init__(self, host, session):
-        self._host=host
-        self._session=session
-        self._power=0
-
-    async def async_update(self):
-        raw = await _api_call(self._session, self._host, {"cmd":1,"par":[]})
-        tele = await _api_call(self._session, self._host, {"cmd":4})
+    @property
+    def native_value(self):
+        data = self.coordinator.data or {}
+        raw = data.get("raw") or {}
         par = raw.get("par", [])
-        relay = int(tele.get("f.0",[0])[0])
+        tele = (data.get("telemetry", {}) or {}).get("f.0", [0])
+        relay = int(tele[0]) if tele else 0
 
         enc = 0
-        for p in par:
-            if p[0]==17:
-                enc=int(p[2])
+        for item in par:
+            try:
+                if item[0] == 17:
+                    enc = int(item[2])
+                    break
+            except Exception:
+                continue
 
-        if enc <=1500:
-            power=enc*10
+        if enc <= 1500:
+            power = enc * 10
         else:
-            power=(enc-1500)*20
+            power = (enc - 1500) * 20
 
-        self._power = power if relay==1 else 0
+        return power if relay == 1 else 0
+
+    @property
+    def device_info(self):
+        return DeviceInfo(identifiers={(DOMAIN, self._host)}, name=f"Terneo {self._host}")
+
+class TerneoWifiSignalSensor(SensorEntity):
+    """Wi-Fi RSSI/level sensor (o.0 parameter)"""
+    def __init__(self, coordinator, host):
+        self.coordinator = coordinator
+        self._host = host
+        self._attr_name = f"Terneo {host} WiFi RSSI"
+        self._attr_unique_id = f"terneo_{host}_wifi_rssi"
+        self._attr_native_unit_of_measurement = "dBm"
 
     @property
     def native_value(self):
-        return self._power
-
-class TerneoTelemetrySensor(SensorEntity):
-    _attr_name="Terneo Relay"
-    _attr_native_unit_of_measurement=None
-
-    def __init__(self, host, session):
-        self._host=host
-        self._session=session
-        self._state=0
-
-    async def async_update(self):
-        tele = await _api_call(self._session, self._host, {"cmd":4})
-        self._state=int(tele.get("f.0",[0])[0])
+        tele = self.coordinator.data.get("telemetry", {}) or {}
+        val = tele.get("o.0")
+        if val is not None:
+            try:
+                return int(val)
+            except Exception:
+                pass
+        return None
 
     @property
-    def native_value(self):
-        return self._state
+    def device_info(self):
+        return DeviceInfo(identifiers={(DOMAIN, self._host)}, name=f"Terneo {self._host}")

@@ -1,2 +1,2 @@
-# terneo_plus
-Terneo home assistant integration
+Привет мир.
+Моя первая интеграция для HA
