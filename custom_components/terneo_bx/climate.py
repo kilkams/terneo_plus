@@ -4,9 +4,6 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.components.climate.const import (
-    ATTR_TEMPERATURE,
-)
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.helpers.entity import DeviceInfo
 from .const import DOMAIN
@@ -14,22 +11,24 @@ from .api import CannotConnect
 
 _LOGGER = logging.getLogger(__name__)
 
-
+# Соответствие кодов устройства режимам HA
 MODE_MAP = {
     "0": HVACMode.OFF,      # устройство выключено
     "3": HVACMode.HEAT,     # ручной режим (нагрев)
     "1": HVACMode.AUTO,     # авто (по расписанию)
 }
 
-
 REVERSE_MODE_MAP = {v: k for k, v in MODE_MAP.items()}
 
 
 class TerneoClimate(ClimateEntity):
-    """Основной климат-контроллер тернео"""
+    """Основной климат-контроллер тернео."""
 
     _attr_temperature_unit = TEMP_CELSIUS
-    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.HVAC_MODE
+    _attr_supported_features = (
+        ClimateEntityFeature.TARGET_TEMPERATURE |
+        ClimateEntityFeature.HVAC_MODE
+    )
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO]
 
     def __init__(self, api, host):
@@ -70,7 +69,7 @@ class TerneoClimate(ClimateEntity):
 
     async def async_set_temperature(self, **kwargs):
         """Установка уставки температуры (par.31)."""
-        temp = kwargs.get(ATTR_TEMPERATURE)
+        temp = kwargs.get("temperature")
         if temp is None:
             return
 
@@ -79,6 +78,8 @@ class TerneoClimate(ClimateEntity):
             self._target_temperature = temp
         except CannotConnect:
             _LOGGER.error("Cannot connect to set temperature")
+
+        self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Установка режима работы."""
@@ -92,6 +93,8 @@ class TerneoClimate(ClimateEntity):
             self._hvac_mode = hvac_mode
         except CannotConnect:
             _LOGGER.error("Cannot connect to set HVAC mode")
+
+        self.async_write_ha_state()
 
     async def async_update(self):
         """Обновление состояния из cmd=4 и cmd=1."""
@@ -111,17 +114,18 @@ class TerneoClimate(ClimateEntity):
 
             # Параметры
             params = await self.api.get_parameters()
-            for p_index, p_type, p_value in params.get("par", []):
+            for p_index, _type, p_value in params.get("par", []):
                 if p_index == 31:
                     try:
                         self._target_temperature = int(p_value)
-                    except:
+                    except ValueError:
                         pass
 
             self._available = True
 
         except CannotConnect:
             self._available = False
+
         except Exception as e:
             _LOGGER.error("Error updating climate: %s", e)
             self._available = False
