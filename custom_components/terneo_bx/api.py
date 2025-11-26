@@ -1,107 +1,96 @@
+import logging
 import aiohttp
 import async_timeout
 
-class TerneoAPI:
-    def __init__(self, host):
-        self._url = f"http://{host}/api.cgi"
-        self._session = None
+from .const import (
+    API_ENDPOINT,
+    CMD_TELEMETRY,
+    CMD_PARAMS,
+    CMD_SET_PARAM
+)
 
-    async def _ensure_session(self):
-        if self._session is None:
-            self._session = aiohttp.ClientSession()
+_LOGGER = logging.getLogger(__name__)
 
-    async def close(self):
-        if self._session is not None:
-            await self._session.close()
-            self._session = None
 
-    async def _request(self, payload):
-        await self._ensure_session()
+class TerneoApi:
+    """Low-level API client for Terneo thermostats."""
+
+    def __init__(self, host: str):
+        self.host = host.rstrip("/")
+
+    async def _post(self, payload: dict) -> dict | None:
+        """Perform POST to http://host/api.cgi"""
+        url = f"http://{self.host}{API_ENDPOINT}"
+        _LOGGER.debug("Terneo POST %s -> %s", url, payload)
+
         try:
-            async with async_timeout.timeout(6):
-                async with self._session.post(self._url, json=payload, headers={"Content-Type": "application/json"}) as resp:
-                    if resp.status == 200:
-                        return await resp.json()
+            async with async_timeout.timeout(10):
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json=payload) as resp:
+                        if resp.status != 200:
+                            _LOGGER.error("Terneo API HTTP error: %s", resp.status)
+                            return None
+                        data = await resp.json()
+                        _LOGGER.debug("Terneo API response: %s", data)
+                        return data
+
+        except Exception as e:
+            _LOGGER.error("Terneo API request failed: %s", e)
+            return None
+
+    # ---------------------------------------------------------------------
+    # TELEMETRY — cmd=4
+    # ---------------------------------------------------------------------
+    async def get_telemetry(self):
+        """Get telemetry (cmd=4)."""
+        return await self._post({"cmd": CMD_TELEMETRY})
+
+    # ---------------------------------------------------------------------
+    # PARAMS — cmd=1
+    # ---------------------------------------------------------------------
+    async def get_params(self):
+        """Get full parameters array (cmd=1)."""
+        return await self._post({"cmd": CMD_PARAMS})
+
+    # ---------------------------------------------------------------------
+    # SET PARAM — cmd=2
+    # ---------------------------------------------------------------------
+    async def set_parameter(self, par_index: int, value: int):
+    payload = {"cmd": 2, "par": [[par_index, value]]}
+    return await self._post(payload)
+
+    # ---------------------------------------------------------------------
+    # HELPERS
+    # ---------------------------------------------------------------------
+    @staticmethod
+    def extract_param(params: dict, pid: int):
+        """Extract parameter value by ID from cmd=1 result."""
+        arr = params.get("par", [])
+        for item in arr:
+            if item[0] == pid:
+                return item[2]
+        return None
+
+    @staticmethod
+    def extract_int(obj: dict, field: str) -> int | None:
+        """Extract int value from telemetry fields like t.0, o.0 etc."""
+        if field not in obj:
+            return None
+        try:
+            return int(obj[field])
         except Exception:
             return None
 
-    async def get_raw(self):
-        return await self._request({"cmd": 1, "par": []})
-
-    async def get_telemetry(self):
-        return await self._request({"cmd": 4})
-
-    async def set_parameter(self, sn: str, param_id: int, value):
-        payload = {
-            "cmd": 2,
-            "sn": sn,
-            "par": [[param_id, value]]
-        }
-        return await self._request(payload)
-
-    async def set_temperature(self, temperature: float, sn: str, param_id: int = 31):
-        return await self.set_parameter(sn, param_id, int(temperature))
-
-    async def get_schedule(self, sn: str):
-        payload = {"cmd": 2, "sn": sn}
-        return await self._request(payload)
-
-    async def set_schedule(self, sn: str, schedule: dict):
-        payload = {"cmd": 2, "sn": sn, "tt": schedule}
-        return await self._request(payload)
-
     @staticmethod
-    async def discover_subnet(hass, subnet_cidr: str, timeout_per_host: float = 0.8):
-        import ipaddress
-        import asyncio
-        import async_timeout
-        import aiohttp
-
-        hosts = []
+    def extract_float(obj: dict, field: str) -> float | None:
+        if field not in obj:
+            return None
         try:
-            net = ipaddress.ip_network(subnet_cidr, strict=False)
+            return float(obj[field])
         except Exception:
-            return hosts
+            return None
 
-        sem = asyncio.Semaphore(200)
-
-        async def check_ip(ip):
-            url = f"http://{ip}/api.cgi"
-            try:
-                async with sem:
-                    async with aiohttp.ClientSession() as session:
-                        async with async_timeout.timeout(timeout_per_host):
-                            async with session.post(url, json={"cmd":1, "par": []}, headers={"Content-Type":"application/json"}) as resp:
-                                if resp.status == 200:
-                                    data = await resp.json()
-                                    if data and isinstance(data, dict) and "par" in data:
-                                        hosts.append(str(ip))
-            except Exception:
-                return
-
-        tasks = [check_ip(str(ip)) for ip in net.hosts()]
-        await asyncio.gather(*tasks)
-        return hosts
-
-    @staticmethod
-    async def discover_broadcast(port: int = 9000, timeout: float = 5.0):
-        import asyncio
-        import socket
-
-        found = set()
-        loop = asyncio.get_running_loop()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.bind(("", port))
-        sock.setblocking(False)
-
-        end = loop.time() + timeout
-        while loop.time() < end:
-            try:
-                data, addr = await loop.sock_recvfrom(sock, 2048)
-                found.add(addr[0])
-            except Exception:
-                await asyncio.sleep(0.1)
-
-        sock.close()
-        return list(found)
+    async def set_mode(self, mode: str):
+    # команды режима — параметр m.1
+    payload = {"cmd": 3, "m.1": mode}
+    return await self._post(payload)

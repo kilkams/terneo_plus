@@ -1,39 +1,93 @@
+import logging
 from datetime import timedelta
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.core import HomeAssistant
-from .api import TerneoAPI
-from .const import DEFAULT_SCAN_INTERVAL
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+    UpdateFailed
+)
+
+from .const import (
+    PAR_TARGET_TEMP,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
 
 class TerneoCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, host: str, scan_interval: int = DEFAULT_SCAN_INTERVAL):
-        self.api = TerneoAPI(host)
-        self._host = host
+    """Coordinator that fetches telemetry + params."""
+
+    def __init__(self, hass, api, update_interval: timedelta):
         super().__init__(
             hass,
-            logger=hass.helpers.logger.getLogger("terneo_thermostat"),
-            name=f"Terneo {host}",
-            update_interval=timedelta(seconds=scan_interval),
+            _LOGGER,
+            name="terneo_coordinator",
+            update_interval=update_interval,
         )
-        self.sn = None
+        self.api = api
 
     async def _async_update_data(self):
-        raw = await self.api.get_raw()
-        tele = await self.api.get_telemetry()
-        if raw and isinstance(raw, dict):
-            sn = raw.get("sn") or raw.get("serial")
-            if sn:
-                self.sn = sn
-        schedule = None
-        if self.sn:
-            try:
-                schedule = await self.api.get_schedule(self.sn)
-            except Exception:
-                schedule = None
-        return {
-            "raw": raw,
-            "telemetry": tele,
-            "schedule": schedule,
-        }
+        """Fetch data from Terneo device."""
+        telemetry = await self.api.get_telemetry()
+        if telemetry is None:
+            raise UpdateFailed("Cannot connect (telemetry)")
 
-    async def async_close(self):
-        await self.api.close()
+        params = await self.api.get_params()
+        if params is None:
+            raise UpdateFailed("Cannot connect (params)")
+
+        data = {}
+
+        # -----------------------------------------------------------
+        # TEMPERATURE SENSORS
+        # -----------------------------------------------------------
+        # t.0 — air temp (×10)
+        t0 = self.api.extract_int(telemetry, "t.0")
+        if t0 is not None:
+            data["temp_air"] = t0 / 10.0
+
+        # t.1 — floor temp (×10)
+        t1 = self.api.extract_int(telemetry, "t.1")
+        if t1 is not None:
+            data["temp_floor"] = t1 / 10.0
+
+        # t.5 — setpoint (sometimes)
+        t5 = self.api.extract_int(telemetry, "t.5")
+        if t5 is not None:
+            data["temp_internal"] = t5 / 10.0
+
+        # -----------------------------------------------------------
+        # TARGET TEMPERATURE (PAR 31)
+        # -----------------------------------------------------------
+        target_raw = self.api.extract_param(params, PAR_TARGET_TEMP)
+        if target_raw is not None:
+            # par.31 — integer Celsius
+            try:
+                data["target_temp"] = int(target_raw)
+            except:
+                data["target_temp"] = None
+        else:
+            data["target_temp"] = None
+
+        # -----------------------------------------------------------
+        # HEATING MODE (m.1)
+        # -----------------------------------------------------------
+        mode = telemetry.get("m.1")
+        if mode is not None:
+            try:
+                data["mode"] = int(mode)
+            except:
+                data["mode"] = None
+
+        # -----------------------------------------------------------
+        # WIFI SIGNAL (o.0)
+        # -----------------------------------------------------------
+        wifi = telemetry.get("o.0")
+        try:
+            data["wifi_signal"] = int(wifi)
+        except:
+            data["wifi_signal"] = None
+
+        # Raw response also included
+        data["raw_telemetry"] = telemetry
+        data["raw_params"] = params
+
+        return data
