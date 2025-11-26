@@ -34,7 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     }
 
     # Forward platforms
-    await hass.config_entries.async_forward_entry_setups(entry, ["climate", "sensor", "binary_sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry,["climate", "sensor", "binary_sensor", "calendar"])
 
     _LOGGER.info("Terneo integration setup completed for %s", host)
     return True

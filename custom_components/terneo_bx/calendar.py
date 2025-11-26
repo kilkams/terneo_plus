@@ -8,6 +8,14 @@ from homeassistant.components.calendar.const import CalendarEntityFeature
 from .const import DOMAIN, LOGGER
 from .coordinator import TerneoCoordinator
 
+async def async_setup_entry(hass, entry, async_add_entities):
+    coordinator: TerneoCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+
+    host = entry.data.get("host", "unknown")
+
+    async_add_entities([
+        TerneoCalendar(coordinator, host)
+    ])
 
 class TerneoCalendar(CalendarEntity):
     """Terneo weekly schedule calendar (tt)."""
