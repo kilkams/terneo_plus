@@ -56,8 +56,8 @@ class TerneoApi:
     # SET PARAM — cmd=2
     # ---------------------------------------------------------------------
     async def set_parameter(self, par_index: int, value: int):
-    payload = {"cmd": 2, "par": [[par_index, value]]}
-    return await self._post(payload)
+       payload = {"cmd": 2, "par": [[par_index, value]]}
+       return await self._post(payload)
 
     # ---------------------------------------------------------------------
     # HELPERS
@@ -92,5 +92,5 @@ class TerneoApi:
 
     async def set_mode(self, mode: str):
     # команды режима — параметр m.1
-    payload = {"cmd": 3, "m.1": mode}
-    return await self._post(payload)
+        payload = {"cmd": 3, "m.1": mode}
+        return await self._post(payload)
