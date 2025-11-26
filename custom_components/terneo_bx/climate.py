@@ -13,11 +13,13 @@ from .coordinator import TerneoCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+# mapping numeric mode (from telemetry m.1) -> HVACMode
 MODE_MAP = {
     0: HVACMode.OFF,
     1: HVACMode.AUTO,
     3: HVACMode.HEAT,
 }
+# reverse: HVACMode -> numeric code
 REVERSE_MODE_MAP = {v: k for k, v in MODE_MAP.items()}
 
 
@@ -25,7 +27,8 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
     """Climate entity backed by TerneoCoordinator."""
 
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.HVAC_MODE
+    # only target temperature is a "supported feature" in current HA API
+    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO]
 
     def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str):
@@ -64,10 +67,8 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
         temperature = kwargs.get("temperature")
         if temperature is None:
             return
-        # par.31 expects integer Celsius (device uses int degrees)
         try:
             await self.api.set_parameter(PAR_TARGET_TEMP, int(temperature))
-            # request coordinator refresh
             await self.coordinator.async_request_refresh()
         except CannotConnect:
             _LOGGER.error("Cannot connect to device to set temperature")
