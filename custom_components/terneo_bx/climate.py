@@ -7,7 +7,7 @@ from homeassistant.components.climate import (
 from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.entity import DeviceInfo
 from .const import DOMAIN
-from .api import CannotConnect
+from .api import TerneoApi, CannotConnect
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -9,6 +9,10 @@ from .const import (
     CMD_SET_PARAM
 )
 
+class CannotConnect(Exception):
+    """Ошибка подключения к термостату."""
+    pass
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -28,15 +32,12 @@ class TerneoApi:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(url, json=payload) as resp:
                         if resp.status != 200:
-                            _LOGGER.error("Terneo API HTTP error: %s", resp.status)
-                            return None
-                        data = await resp.json()
-                        _LOGGER.debug("Terneo API response: %s", data)
-                        return data
+                            raise CannotConnect(f"HTTP {resp.status}")
+
+                        return await resp.json()
 
         except Exception as e:
-            _LOGGER.error("Terneo API request failed: %s", e)
-            return None
+            raise CannotConnect(f"API request failed: {e}")
 
     # ---------------------------------------------------------------------
     # TELEMETRY — cmd=4
@@ -95,7 +96,7 @@ class TerneoApi:
         except Exception:
             return None
 
-    async def set_mode(self, mode: str):
-    # команды режима — параметр m.1
-        payload = {"cmd": 3, "m.1": mode}
+    async def set_mode(self, mode_code: int):
+        """Установка режима через параметр 17."""
+        payload = {"cmd": CMD_SET_PARAM, "par": [[17, mode_code]]}
         return await self._post(payload)
