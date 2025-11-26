@@ -1,4 +1,4 @@
-DOMAIN = "terneo-bx"
+DOMAIN = "terneo_bx"
 
 DEFAULT_SCAN_INTERVAL = 20
 
