@@ -22,6 +22,14 @@ MODE_MAP = {
 # reverse: HVACMode -> numeric code
 REVERSE_MODE_MAP = {v: k for k, v in MODE_MAP.items()}
 
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up the climate entity."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    device = hass.data[DOMAIN][entry.entry_id]["device"]
+
+    async_add_entities([TerneoBXClimate(coordinator, device)], True)
+
+
 
 class TerneoClimate(CoordinatorEntity, ClimateEntity):
     """Climate entity backed by TerneoCoordinator."""
