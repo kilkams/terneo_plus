@@ -4,7 +4,7 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import TEMP_CELSIUS
+from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.entity import DeviceInfo
 from .const import DOMAIN
 from .api import CannotConnect
@@ -24,7 +24,7 @@ REVERSE_MODE_MAP = {v: k for k, v in MODE_MAP.items()}
 class TerneoClimate(ClimateEntity):
     """Основной климат-контроллер тернео."""
 
-    _attr_temperature_unit = TEMP_CELSIUS
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE |
         ClimateEntityFeature.HVAC_MODE
