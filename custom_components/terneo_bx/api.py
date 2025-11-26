@@ -45,6 +45,11 @@ class TerneoApi:
         """Get telemetry (cmd=4)."""
         return await self._post({"cmd": CMD_TELEMETRY})
 
+
+    async def get_parameters(self):
+        """Получение параметров cmd=1"""
+        return await self._post({"cmd": 1})
+
     # ---------------------------------------------------------------------
     # PARAMS — cmd=1
     # ---------------------------------------------------------------------
@@ -56,8 +61,8 @@ class TerneoApi:
     # SET PARAM — cmd=2
     # ---------------------------------------------------------------------
     async def set_parameter(self, par_index: int, value: int):
-       payload = {"cmd": 2, "par": [[par_index, value]]}
-       return await self._post(payload)
+        payload = {"cmd": 2, "par": [[par_index, value]]}
+        return await self._post(payload)
 
     # ---------------------------------------------------------------------
     # HELPERS
