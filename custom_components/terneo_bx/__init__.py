@@ -1,10 +1,8 @@
-import asyncio
 import logging
 from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
 from .api import TerneoApi
@@ -13,9 +11,11 @@ from .coordinator import TerneoCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     host = entry.data["host"]
-    scan_interval = entry.options.get("scan_interval", entry.data.get("scan_interval", DEFAULT_SCAN_INTERVAL))
+    scan_interval = entry.options.get(
+        "scan_interval", entry.data.get("scan_interval", DEFAULT_SCAN_INTERVAL)
+    )
 
     api = TerneoApi(host)
 
@@ -33,15 +33,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         "coordinator": coordinator,
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, ["climate", "sensor"])
+    # Forward platforms
+    await hass.config_entries.async_forward_entry_setups(entry, ["climate", "sensor", "binary_sensor"])
 
+    _LOGGER.info("Terneo integration setup completed for %s", host)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["climate", "sensor"])
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["climate", "sensor", "binary_sensor"])
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-
+        hass.data[DOMAIN].pop(entry.entry_id, None)
     return unload_ok
-
