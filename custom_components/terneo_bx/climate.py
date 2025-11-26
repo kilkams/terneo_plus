@@ -1,75 +1,127 @@
-from homeassistant.components.climate import ClimateEntity
+import logging
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityFeature,
+    HVACMode,
+)
 from homeassistant.components.climate.const import (
-    HVAC_MODE_HEAT, HVAC_MODE_OFF, SUPPORT_TARGET_TEMPERATURE
+    ATTR_TEMPERATURE,
 )
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.helpers.entity import DeviceInfo
 from .const import DOMAIN
+from .api import CannotConnect
+
+_LOGGER = logging.getLogger(__name__)
+
+
+MODE_MAP = {
+    "0": HVACMode.OFF,      # устройство выключено
+    "3": HVACMode.HEAT,     # ручной режим (нагрев)
+    "1": HVACMode.AUTO,     # авто (по расписанию)
+}
+
+
+REVERSE_MODE_MAP = {v: k for k, v in MODE_MAP.items()}
+
 
 class TerneoClimate(ClimateEntity):
-    def __init__(self, coordinator, host):
-        self.coordinator = coordinator
+    """Основной климат-контроллер тернео"""
+
+    _attr_temperature_unit = TEMP_CELSIUS
+    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.HVAC_MODE
+    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO]
+
+    def __init__(self, api, host):
+        self.api = api
         self._host = host
+
         self._attr_name = f"Terneo {host}"
-        self._attr_unique_id = f"terneo_{host}_climate"
-        self._attr_supported_features = SUPPORT_TARGET_TEMPERATURE
-        self._attr_temperature_unit = TEMP_CELSIUS
+        self._available = False
 
-    @property
-    def hvac_mode(self):
-        tele = (self.coordinator.data.get("telemetry", {}) or {})
-        return HVAC_MODE_HEAT if str(tele.get("f.0", [0])[0]) == "1" else HVAC_MODE_OFF
-
-    @property
-    def current_temperature(self):
-        tele = (self.coordinator.data.get("telemetry", {}) or {})
-        for k, v in tele.items():
-            if k.startswith("t") and isinstance(v, (int, float, str)):
-                try:
-                    return float(v) / 16.0
-                except Exception:
-                    continue
-        raw = (self.coordinator.data.get("raw", {}) or {})
-        for p in raw.get("par", []):
-            if p[0] == 1:
-                try:
-                    return float(p[2])
-                except Exception:
-                    pass
-        return None
-
-    @property
-    def target_temperature(self):
-        tele = (self.coordinator.data.get("telemetry", {}) or {})
-        if "t.5" in tele:
-            try:
-                return float(tele.get("t.5")) / 16.0
-            except Exception:
-                pass
-        raw = (self.coordinator.data.get("raw", {}) or {})
-        for p in raw.get("par", []):
-            if p[0] == 31:
-                try:
-                    return float(p[2])
-                except Exception:
-                    pass
-        return None
-
-    async def async_set_temperature(self, **kwargs):
-        if "temperature" in kwargs:
-            temp = kwargs["temperature"]
-            sn = self.coordinator.sn
-            if sn is None:
-                return
-            await self.coordinator.api.set_temperature(temp, sn)
-            await self.coordinator.async_request_refresh()
+        self._current_temperature = None
+        self._target_temperature = None
+        self._hvac_mode = HVACMode.OFF
+        self._relay_state = None
 
     @property
     def device_info(self):
-        return DeviceInfo(identifiers={(DOMAIN, self._host)}, name=f"Terneo {self._host}")
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._host)},
+            name=f"Terneo {self._host}",
+            manufacturer="Terneo",
+        )
 
     @property
-    def extra_state_attributes(self):
-        data = self.coordinator.data or {}
-        schedule = (data.get("schedule") or {}).get("tt")
-        return {"schedule": schedule}
+    def available(self):
+        return self._available
+
+    @property
+    def current_temperature(self):
+        return self._current_temperature
+
+    @property
+    def target_temperature(self):
+        return self._target_temperature
+
+    @property
+    def hvac_mode(self):
+        return self._hvac_mode
+
+    async def async_set_temperature(self, **kwargs):
+        """Установка уставки температуры (par.31)."""
+        temp = kwargs.get(ATTR_TEMPERATURE)
+        if temp is None:
+            return
+
+        try:
+            await self.api.set_parameter(31, int(temp))
+            self._target_temperature = temp
+        except CannotConnect:
+            _LOGGER.error("Cannot connect to set temperature")
+
+    async def async_set_hvac_mode(self, hvac_mode):
+        """Установка режима работы."""
+        mode_code = REVERSE_MODE_MAP.get(hvac_mode)
+        if mode_code is None:
+            _LOGGER.error("Unsupported HVAC mode %s", hvac_mode)
+            return
+
+        try:
+            await self.api.set_mode(mode_code)
+            self._hvac_mode = hvac_mode
+        except CannotConnect:
+            _LOGGER.error("Cannot connect to set HVAC mode")
+
+    async def async_update(self):
+        """Обновление состояния из cmd=4 и cmd=1."""
+        try:
+            tele = await self.api.get_telemetry()
+
+            # Температуры — t.0 = воздух, t.1 = пол
+            if "t.0" in tele:
+                self._current_temperature = round(int(tele["t.0"]) / 10, 1)
+
+            # Реле
+            self._relay_state = tele.get("f.10") == "1"
+
+            # Режим m.1
+            raw_mode = tele.get("m.1")
+            self._hvac_mode = MODE_MAP.get(raw_mode, HVACMode.HEAT)
+
+            # Параметры
+            params = await self.api.get_parameters()
+            for p_index, p_type, p_value in params.get("par", []):
+                if p_index == 31:
+                    try:
+                        self._target_temperature = int(p_value)
+                    except:
+                        pass
+
+            self._available = True
+
+        except CannotConnect:
+            self._available = False
+        except Exception as e:
+            _LOGGER.error("Error updating climate: %s", e)
+            self._available = False

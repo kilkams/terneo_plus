@@ -1,18 +1,47 @@
+import asyncio
+import logging
+from datetime import timedelta
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, PLATFORMS
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
+from .api import TerneoApi
 from .coordinator import TerneoCoordinator
 
+_LOGGER = logging.getLogger(__name__)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    scan_interval = entry.options.get("scan_interval", entry.data.get("scan_interval", 20))
-    coordinator = TerneoCoordinator(hass, entry.data["host"], scan_interval=scan_interval)
+    host = entry.data["host"]
+    scan_interval = entry.options.get("scan_interval", entry.data.get("scan_interval", DEFAULT_SCAN_INTERVAL))
+
+    api = TerneoApi(host)
+
+    coordinator = TerneoCoordinator(
+        hass=hass,
+        api=api,
+        update_interval=timedelta(seconds=scan_interval),
+    )
+
     await coordinator.async_config_entry_first_refresh()
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = {
+        "api": api,
+        "coordinator": coordinator,
+    }
+
+    await hass.config_entries.async_forward_entry_setups(entry, ["climate", "sensor"])
+
     return True
 
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    coordinator = hass.data[DOMAIN].pop(entry.entry_id)
-    await coordinator.async_close()
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["climate", "sensor"])
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+
     return unload_ok
+
