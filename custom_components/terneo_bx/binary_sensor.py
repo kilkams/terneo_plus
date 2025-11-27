@@ -25,7 +25,7 @@ class TerneoRelaySensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def device_info(self) -> DeviceInfo:
-        return DeviceInfo(identifiers={(DOMAIN, self._host)}, name=f"Terneo {self._host}", manufacturer="Terneo")
+        return DeviceInfo(identifiers={(DOMAIN, self._host)}, name=f"Terneo {self._host}", manufacturer="Terneo", model="Terneo BX")
 
     @property
     def is_on(self) -> bool:
