@@ -4,6 +4,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
+from .const import DOMAIN
 
 WEEKDAYS = ["0", "1", "2", "3", "4", "5", "6"]  # Monday–Sunday
 
