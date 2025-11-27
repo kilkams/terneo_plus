@@ -55,7 +55,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={(DOMAIN, self._serial)},
+            identifiers={(DOMAIN, self._host)},
             name=f"Terneo {self._host}",
             manufacturer="Terneo",
             model="Terneo BX"
