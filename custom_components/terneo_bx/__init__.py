@@ -15,7 +15,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Terneo BX from config entry."""
 
     host = entry.data["host"]
-    serial = entry.data.get("serial")  # ← читаем serial из конфигурации
+    serial = entry.data.get("serial")  
     scan_interval = entry.options.get(
         "scan_interval",
         entry.data.get("scan_interval", DEFAULT_SCAN_INTERVAL)
@@ -27,7 +27,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass=hass,
         api=api,
         update_interval=timedelta(seconds=scan_interval),
-        serial=serial,                  # ← ОБЯЗАТЕЛЬНО передаём
+        serial=serial,
+        host=host, 
     )
 
     # первый fetch данных
