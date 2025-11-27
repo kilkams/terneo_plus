@@ -22,7 +22,7 @@ class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
         super().__init__(coordinator)
         self._attr_name = name
         self._device_id = device_id
-        self._attr_unique_id = f"{device_id}_schedule"
+        self._attr_unique_id = f"Terneo_{self._attr_name}_schedule"
         self._current_event = None
 
     # -------------------------------
