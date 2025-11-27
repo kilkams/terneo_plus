@@ -63,7 +63,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def current_temperature(self):
-        return self.coordinator.data.get("temp_air")
+        return self.coordinator.data.get("temp_floor")
 
     @property
     def target_temperature(self):
