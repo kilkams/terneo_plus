@@ -9,7 +9,7 @@ _LOGGER = logging.getLogger(__name__)
 class TerneoCoordinator(DataUpdateCoordinator):
     """Coordinator for Terneo BX."""
 
-    def __init__(self, hass, api, update_interval, serial, host):  
+    def __init__(self, hass, api, update_interval, serial, host):
         super().__init__(
             hass,
             _LOGGER,
@@ -18,7 +18,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
         )
         self.api = api
         self.serial = serial
-        self.host = host  
+        self.host = host
 
     async def _async_update_data(self):
         """Fetch full Terneo state."""
@@ -26,28 +26,31 @@ class TerneoCoordinator(DataUpdateCoordinator):
         # 1) Параметры
         try:
             params = await self.api.get_params()
+            par = params.get("par")
+            if not isinstance(par, list):
+                _LOGGER.warning("Invalid params payload, using empty list")
+                par = []
         except Exception as e:
-            raise UpdateFailed(f"Failed to read params: {e}")
-
-        par = params.get("par")
-        if not isinstance(par, list):
-            raise UpdateFailed("Invalid params payload")
+            _LOGGER.error(f"Failed to read params: {e}")
+            par = []
 
         # 2) Расписание
         try:
             schedule = await self.api.get_schedule()
+            tt = schedule.get("tt")
+            if not isinstance(tt, dict):
+                _LOGGER.warning("Invalid schedule payload, using empty dict")
+                tt = {}
         except Exception as e:
-            raise UpdateFailed(f"Failed to read schedule: {e}")
-
-        tt = schedule.get("tt")
-        if not isinstance(tt, dict):
-            raise UpdateFailed("Invalid schedule payload")
+            _LOGGER.error(f"Failed to read schedule: {e}")
+            tt = {}
 
         # 3) Время
         try:
             time_data = await self.api.get_time()
         except Exception as e:
-            raise UpdateFailed(f"Failed to read time: {e}")
+            _LOGGER.error(f"Failed to read time: {e}")
+            time_data = {}
 
         # 4) Телеметрия
         try:
@@ -74,8 +77,8 @@ class TerneoCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Invalid telemetry payload: {e}")
 
         # Разбор параметров - создаем словарь {id: value}
+        params_dict = {}
         try:
-            params_dict = {}
             for item in par:
                 if len(item) >= 3:
                     param_id = item[0]
@@ -88,7 +91,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             
             # ID=2: mode - режим работы (0=расписание, 1=ручной)
             mode_raw = params_dict.get(2)
-            mode = int(mode_raw) if mode_raw else None
+            mode = int(mode_raw) if mode_raw else 0
             
             # ID=3: controlType - режим контроля (0=по полу, 1=по воздуху, 2=расширенный)
             control_type_raw = params_dict.get(3)
@@ -115,7 +118,15 @@ class TerneoCoordinator(DataUpdateCoordinator):
             hvac_mode = int(hvac_mode_raw) if hvac_mode_raw else 0
 
         except (ValueError, TypeError, KeyError) as e:
-            raise UpdateFailed(f"Params structure mismatch: {e}")
+            _LOGGER.error(f"Params parsing error: {e}")
+            target_temp = None
+            mode = 0
+            control_type = None
+            manual_air = None
+            manual_floor = None
+            histeresis = None
+            power_off = 0
+            hvac_mode = 0
 
         # Итоговые данные
         return {
@@ -135,7 +146,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             "time": time_data.get("time") if time_data else None,
             "params_dict": params_dict,
             "raw": {
-                "params": params,
+                "params": params if par else {},
                 "telemetry": telemetry,
             },
         }
