@@ -17,8 +17,14 @@ class TerneoCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict[str, Any]:
         try:
             telemetry = await self.api.get_telemetry()
-            if telemetry is None:
-                raise UpdateFailed('no telemetry')
+            # Telemetry is optional on some models — skip if missing
+            telemetry = data.get("tl", {})
+
+            return {
+                "params": data.get("params", {}),
+                "telemetry": telemetry,
+                "tt": data.get("tt", {}),
+            }
             params = await self.api.get_params()
             if params is None:
                 raise UpdateFailed('no params')
