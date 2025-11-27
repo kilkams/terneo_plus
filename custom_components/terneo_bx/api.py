@@ -1,102 +1,94 @@
-import logging
-import aiohttp
-import async_timeout
+import logging, aiohttp, async_timeout
+from typing import Any, Dict
 
-from .const import (
-    API_ENDPOINT,
-    CMD_TELEMETRY,
-    CMD_PARAMS,
-    CMD_SET_PARAM
-)
-
-class CannotConnect(Exception):
-    """Ошибка подключения к термостату."""
-    pass
+from .const import API_ENDPOINT, CMD_TELEMETRY, CMD_PARAMS, CMD_SET_PARAM
 
 _LOGGER = logging.getLogger(__name__)
 
+class CannotConnect(Exception):
+    pass
 
 class TerneoApi:
-    """Low-level API client for Terneo thermostats."""
-
-    def __init__(self, host: str):
+    def __init__(self, host: str, sn: str | None = None):
         self.host = host.rstrip("/")
+        self.sn = sn
 
-    async def _post(self, payload: dict) -> dict | None:
-        """Perform POST to http://host/api.cgi"""
+    async def _post(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         url = f"http://{self.host}{API_ENDPOINT}"
-        _LOGGER.debug("Terneo POST %s -> %s", url, payload)
-
+        _LOGGER.debug("POST %s -> %s", url, payload)
         try:
             async with async_timeout.timeout(10):
                 async with aiohttp.ClientSession() as session:
                     async with session.post(url, json=payload) as resp:
+                        raw = await resp.text()
                         if resp.status != 200:
-                            raise CannotConnect(f"HTTP {resp.status}")
-
-                        return await resp.json()
-
+                            raise CannotConnect(f"HTTP {resp.status}: {raw}")
+                        try:
+                            return await resp.json()
+                        except Exception as e:
+                            _LOGGER.debug("Invalid JSON response: %s", raw)
+                            raise CannotConnect(f"Invalid JSON: {e}")
         except Exception as e:
             raise CannotConnect(f"API request failed: {e}")
 
-    # ---------------------------------------------------------------------
-    # TELEMETRY — cmd=4
-    # ---------------------------------------------------------------------
-    async def get_telemetry(self):
-        """Get telemetry (cmd=4)."""
-        return await self._post({"cmd": CMD_TELEMETRY})
-
-
-    async def get_parameters(self):
-        """Получение параметров cmd=1"""
-        return await self._post({"cmd": 1})
-
-    # ---------------------------------------------------------------------
-    # PARAMS — cmd=1
-    # ---------------------------------------------------------------------
-    async def get_params(self):
-        """Get full parameters array (cmd=1)."""
+    # READ
+    async def get_params(self) -> Dict[str, Any] | None:
         return await self._post({"cmd": CMD_PARAMS})
 
-    # ---------------------------------------------------------------------
-    # SET PARAM — cmd=2
-    # ---------------------------------------------------------------------
-    async def set_parameter(self, par_index: int, value: int):
-        payload = {"cmd": 2, "par": [[par_index, value]]}
-        return await self._post(payload)
+    async def get_schedule(self) -> Dict[str, Any] | None:
+        return await self._post({"cmd": 2})
 
-    # ---------------------------------------------------------------------
+    async def get_time(self) -> Dict[str, Any] | None:
+        return await self._post({"cmd": 3})
+
+    async def get_telemetry(self) -> Dict[str, Any] | None:
+        return await self._post({"cmd": CMD_TELEMETRY})
+
+    # WRITE: set parameter (must include sn when writing)
+    async def set_parameter(self, par_index: int, value: Any, sn: str | None = None):
+        body = {"cmd": CMD_SET_PARAM, "par": [[par_index, value]]}
+        if sn or self.sn:
+            body["sn"] = sn or self.sn
+        return await self._post(body)
+
+    async def set_schedule(self, day: int, periods: list, sn: str | None = None):
+        """Set schedule for single day. periods = [[minute, temp], ...]"""
+        body = {"cmd": 2, "tt": {str(day): periods}}
+        if sn or self.sn:
+            body["sn"] = sn or self.sn
+        return await self._post(body)
+
+    async def set_parameters(self, params: dict, sn: str | None = None):
+        """Legacy bulk params write (uses cmd=3 in some devices)"""
+        par_list = []
+        for k, v in params.items():
+            try:
+                idx = int(k)
+            except:
+                idx = k
+            par_list.append([idx, v])
+        body = {"cmd": 3, "par": par_list}
+        if sn or self.sn:
+            body["sn"] = sn or self.sn
+        return await self._post(body)
+
     # HELPERS
-    # ---------------------------------------------------------------------
     @staticmethod
     def extract_param(params: dict, pid: int):
-        """Extract parameter value by ID from cmd=1 result."""
-        arr = params.get("par", [])
+        arr = params.get("par", []) if isinstance(params, dict) else []
         for item in arr:
-            if item[0] == pid:
-                return item[2]
+            try:
+                if item[0] == pid:
+                    return item[2]
+            except Exception:
+                continue
         return None
 
     @staticmethod
-    def extract_int(obj: dict, field: str) -> int | None:
-        """Extract int value from telemetry fields like t.0, o.0 etc."""
-        if field not in obj:
-            return None
+    def extract_int(obj: dict, field: str):
         try:
-            return int(obj[field])
+            if field in obj:
+                return int(obj[field])
         except Exception:
             return None
-
-    @staticmethod
-    def extract_float(obj: dict, field: str) -> float | None:
-        if field not in obj:
-            return None
-        try:
-            return float(obj[field])
-        except Exception:
-            return None
-
-    async def set_mode(self, mode_code: int):
-        """Установка режима через параметр 17."""
-        payload = {"cmd": CMD_SET_PARAM, "par": [[17, mode_code]]}
-        return await self._post(payload)
+        return None

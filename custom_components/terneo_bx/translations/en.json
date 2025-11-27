@@ -1,0 +1,11 @@
+{
+  "title": "Terneo BX",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Terneo BX",
+        "description": "Add your Terneo device by IP address or use discovery"
+      }
+    }
+  }
+}

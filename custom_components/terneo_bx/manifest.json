@@ -3,11 +3,20 @@
   "name": "Terneo BX",
   "documentation": "https://github.com/kilkams/terneo_plus",
   "issue_tracker": "https://github.com/kilkams/terneo_plus/issues",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "integration_type": "hub",
-  "platforms": ["climate", "sensor", "binary_sensor", "calendar"],
   "iot_class": "local_polling",
   "config_flow": true,
-  "codeowners": ["@kilkams"],
-  "requirements": ["aiohttp"]
+  "codeowners": [
+    "@kilkams"
+  ],
+  "requirements": [
+    "aiohttp"
+  ],
+  "platforms": [
+    "climate",
+    "sensor",
+    "binary_sensor",
+    "calendar"
+  ]
 }
