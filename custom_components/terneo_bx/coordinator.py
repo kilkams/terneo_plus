@@ -72,23 +72,67 @@ class TerneoCoordinator(DataUpdateCoordinator):
         except (ValueError, TypeError) as e:
             raise UpdateFailed(f"Invalid telemetry payload: {e}")
 
-        # Разбор параметров
+        # Разбор параметров - создаем словарь {id: value}
         try:
-            target_temp = par[2]  # целевая температура
-            mode = par[17]  # режим отопления
-        except (IndexError, TypeError) as e:
+            params_dict = {}
+            for item in par:
+                if len(item) >= 3:
+                    param_id = item[0]
+                    param_value = item[2]
+                    params_dict[param_id] = param_value
+            
+            # ID=31: setTemperature - температура уставки текущего режима
+            target_temp_raw = params_dict.get(31)
+            target_temp = int(target_temp_raw) if target_temp_raw else None
+            
+            # ID=2: mode - режим работы (0=расписание, 1=ручной)
+            mode_raw = params_dict.get(2)
+            mode = int(mode_raw) if mode_raw else None
+            
+            # ID=3: controlType - режим контроля (0=по полу, 1=по воздуху, 2=расширенный)
+            control_type_raw = params_dict.get(3)
+            control_type = int(control_type_raw) if control_type_raw else None
+            
+            # ID=4: manualAir - уставка ручного режима по воздуху
+            manual_air_raw = params_dict.get(4)
+            manual_air = int(manual_air_raw) if manual_air_raw else None
+            
+            # ID=5: manualFloorTemperature - уставка ручного режима по полу
+            manual_floor_raw = params_dict.get(5)
+            manual_floor = int(manual_floor_raw) if manual_floor_raw else None
+            
+            # ID=19: histeresis - гистерезис в 1/10 °C
+            histeresis_raw = params_dict.get(19)
+            histeresis = int(histeresis_raw) / 10 if histeresis_raw else None
+            
+            # ID=125: powerOff - выключение устройства
+            power_off_raw = params_dict.get(125)
+            power_off = int(power_off_raw) if power_off_raw else 0
+            
+            # ID=118: coolingControlWay - режим нагрев(0) или охлаждение(1)
+            hvac_mode_raw = params_dict.get(118)
+            hvac_mode = int(hvac_mode_raw) if hvac_mode_raw else 0
+
+        except (ValueError, TypeError, KeyError) as e:
             raise UpdateFailed(f"Params structure mismatch: {e}")
 
         # Итоговые данные
         return {
             "temp_air": temp_air,
             "temp_floor": temp_floor,
-            "temp_external": temp_external,  # дополнительный датчик
+            "temp_external": temp_external,
             "power": power,
             "target_temp": target_temp,
             "mode": mode,
+            "control_type": control_type,
+            "manual_air": manual_air,
+            "manual_floor": manual_floor,
+            "histeresis": histeresis,
+            "power_off": power_off,
+            "hvac_mode": hvac_mode,
             "schedule": tt,
             "time": time_data.get("time") if time_data else None,
+            "params_dict": params_dict,
             "raw": {
                 "params": params,
                 "telemetry": telemetry,
