@@ -20,7 +20,7 @@ class TerneoRelaySensor(CoordinatorEntity, BinarySensorEntity):
         super().__init__(coordinator)
         self._host = host
         self._attr_name = f"Terneo {host} Heating Active"
-        self._attr_unique_id = f"terneo_{coordinator.serial}_heating_active"
+        self._attr_unique_id = f"terneo_{host}_heating_active"
         self._attr_device_class = BinarySensorDeviceClass.HEAT
 
     @property
