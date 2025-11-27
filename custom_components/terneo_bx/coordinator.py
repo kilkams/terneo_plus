@@ -54,9 +54,20 @@ class TerneoCoordinator(DataUpdateCoordinator):
         except Exception as e:
             raise UpdateFailed(f"Failed to read telemetry: {e}")
 
-        tl = telemetry.get("tl")
-        if not isinstance(tl, dict):
-            raise UpdateFailed("Invalid telemetry payload")
+        # Преобразуем структуру Terneo BX → нормальная
+        try:
+            temp_air = int(telemetry.get("t.0")) / 10 if telemetry.get("t.0") else None
+            temp_floor = int(telemetry.get("t.1")) / 10 if telemetry.get("t.1") else None
+
+            # статус реле — m.2 (у тебя там 49, но бывает 0/1)
+            raw_pwr = telemetry.get("m.2")
+            if raw_pwr is not None:
+                power = 1 if int(raw_pwr) > 0 else 0
+            else:
+                power = None
+
+        except Exception as e:
+            raise UpdateFailed(f"Invalid telemetry payload: {e}")
 
         # Разбор телеметрии
         temp_air = tl.get("0")
