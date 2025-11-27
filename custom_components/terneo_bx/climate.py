@@ -9,20 +9,20 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.entity import DeviceInfo
 
-from .const import DOMAIN, PAR_TARGET_TEMP
+from .const import DOMAIN
 from .api import TerneoApi, CannotConnect
 from .coordinator import TerneoCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# соответствие кодов тернео → HA
+# Правильная карта режимов Terneo
+# ID=2 (mode): 0=расписание, 1=ручной
+# ID=125 (powerOff): 0=включено, 1=выключено
 MODE_MAP = {
-    0: HVACMode.OFF,
-    3: HVACMode.HEAT,   # реальный рабочий режим
+    "off": HVACMode.OFF,      # powerOff=1
+    "schedule": HVACMode.AUTO,  # mode=0, powerOff=0
+    "manual": HVACMode.HEAT,    # mode=1, powerOff=0
 }
-
-# обратное соответствие
-REVERSE_MODE_MAP = {v: k for k, v in MODE_MAP.items()}
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -41,7 +41,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class TerneoClimate(CoordinatorEntity, ClimateEntity):
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
-    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
+    _attr_hvac_modes = [HVACMode.OFF, HVACMode.AUTO, HVACMode.HEAT]
 
     def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi):
         super().__init__(coordinator)
@@ -71,35 +71,62 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_mode(self):
-        return MODE_MAP.get(self.coordinator.data.get("mode"), HVACMode.OFF)
+        """Определяем текущий режим HVAC."""
+        power_off = self.coordinator.data.get("power_off", 0)
+        mode = self.coordinator.data.get("mode", 0)
+        
+        if power_off == 1:
+            return HVACMode.OFF
+        elif mode == 0:
+            return HVACMode.AUTO  # расписание
+        else:
+            return HVACMode.HEAT  # ручной режим
 
     async def async_set_temperature(self, **kwargs):
+        """Установить целевую температуру."""
         temperature = kwargs.get("temperature")
         if temperature is None:
             return
+        
         try:
+            # ID=31 - setTemperature
             await self.api.set_parameter(
-                PAR_TARGET_TEMP,
-                int(temperature),
+                param_id=31,
+                value=int(temperature),
                 sn=self._serial
             )
             await self.coordinator.async_request_refresh()
         except CannotConnect:
             _LOGGER.error("Cannot connect to set temperature")
+        except Exception as e:
+            _LOGGER.error(f"Error setting temperature: {e}")
 
     async def async_set_hvac_mode(self, hvac_mode):
-        mode_code = REVERSE_MODE_MAP.get(hvac_mode)
-        if mode_code is None:
-            _LOGGER.error("Unsupported HVAC mode %s", hvac_mode)
-            return
-
+        """Установить режим HVAC."""
+        _LOGGER.debug(f"Setting HVAC mode to: {hvac_mode}")
+        
         try:
-            # параметр 17 — режим работы
-            await self.api.set_parameter(
-                17,
-                mode_code,
-                sn=self._serial
-            )
+            if hvac_mode == HVACMode.OFF:
+                # Выключить устройство: ID=125 (powerOff) = 1
+                await self.api.set_parameter(
+                    param_id=125,
+                    value=1,
+                    sn=self._serial
+                )
+            elif hvac_mode == HVACMode.AUTO:
+                # Режим расписания: ID=2 (mode) = 0, ID=125 (powerOff) = 0
+                await self.api.set_parameter(param_id=125, value=0, sn=self._serial)
+                await self.api.set_parameter(param_id=2, value=0, sn=self._serial)
+            elif hvac_mode == HVACMode.HEAT:
+                # Ручной режим: ID=2 (mode) = 1, ID=125 (powerOff) = 0
+                await self.api.set_parameter(param_id=125, value=0, sn=self._serial)
+                await self.api.set_parameter(param_id=2, value=1, sn=self._serial)
+            else:
+                _LOGGER.error(f"Unsupported HVAC mode: {hvac_mode}")
+                return
+            
             await self.coordinator.async_request_refresh()
         except CannotConnect:
-            _LOGGER.error("Cannot connect to set mode")
+            _LOGGER.error("Cannot connect to set HVAC mode")
+        except Exception as e:
+            _LOGGER.error(f"Error setting HVAC mode: {e}")
