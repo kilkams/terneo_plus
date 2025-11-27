@@ -61,13 +61,13 @@ class TerneoCoordinator(DataUpdateCoordinator):
         # Преобразуем структуру Terneo BX → нормальная
         try:
             # Температура воздуха (t.0) - делим на 10 для получения градусов
-            temp_air = int(telemetry.get("t.0", 0)) / 10 if telemetry.get("t.0") else None
+            temp_air = int(telemetry.get("t.0", 0)) / 16 if telemetry.get("t.0") else None
             
             # Температура пола (t.1) - делим на 10
-            temp_floor = int(telemetry.get("t.1", 0)) / 10 if telemetry.get("t.1") else None
+            temp_floor = int(telemetry.get("t.1", 0)) / 16 if telemetry.get("t.1") else None
             
             # Дополнительный датчик температуры (t.5) - если нужен
-            temp_external = int(telemetry.get("t.5", 0)) / 10 if telemetry.get("t.5") else None
+            temp_external = int(telemetry.get("t.5", 0)) / 16 if telemetry.get("t.5") else None
             
             # Статус реле (m.2) - любое значение > 0 означает включено
             raw_pwr = telemetry.get("m.2")
