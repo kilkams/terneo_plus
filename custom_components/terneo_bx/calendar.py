@@ -13,8 +13,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
+    name = f"{entry.title} Schedule"
+    device_id = coordinator.serial
 
-    async_add_entities([TerneoScheduleCalendar(entry, coordinator)], True)
+    async_add_entities([TerneoScheduleCalendar(coordinator, name, device_id)], True)
 class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
     def __init__(self, coordinator, name, device_id):
         super().__init__(coordinator)
