@@ -5,7 +5,13 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 WEEKDAYS = ["0", "1", "2", "3", "4", "5", "6"]  # Monday–Sunday
 
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
+    """Setup Terneo schedule calendar."""
 
+    data = hass.data[DOMAIN][entry.entry_id]
+    coordinator = data["coordinator"]
+
+    async_add_entities([TerneoScheduleCalendar(entry, coordinator)], True)
 class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
     def __init__(self, coordinator, name, device_id):
         super().__init__(coordinator)
