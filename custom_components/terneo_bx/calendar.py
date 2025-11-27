@@ -1,82 +1,118 @@
-from __future__ import annotations
+import datetime
 from datetime import timedelta
-import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.components.calendar.const import CalendarEntityFeature
-from .const import DOMAIN, LOGGER
-from .coordinator import TerneoCoordinator
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-async def async_setup_entry(hass, entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][entry.entry_id]['coordinator']
-    host = entry.data.get('host')
-    async_add_entities([TerneoCalendar(coordinator, host)])
+WEEKDAYS = ["0", "1", "2", "3", "4", "5", "6"]  # Monday–Sunday
 
-class TerneoCalendar(CalendarEntity):
-    def __init__(self, coordinator: TerneoCoordinator, host: str):
-        self.coordinator = coordinator
-        self._host = host
-        self._attr_name = f"Terneo {host} Schedule"
-        self._attr_unique_id = f"terneo_{host}_schedule"
-        self._attr_supported_features = CalendarEntityFeature.CREATE_EVENT | CalendarEntityFeature.UPDATE_EVENT | CalendarEntityFeature.DELETE_EVENT
 
-    def _read_schedule(self):
-        data = (self.coordinator.data or {}).get('schedule') or {}
-        return {k: list(v) for k,v in (data.items() if isinstance(data, dict) else [])}
+class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
+    def __init__(self, coordinator, name, device_id):
+        super().__init__(coordinator)
+        self._attr_name = name
+        self._device_id = device_id
+        self._attr_unique_id = f"{device_id}_schedule"
+        self._current_event = None
 
-    def _tt_to_events(self, start_date, end_date):
+    # -------------------------------
+    # Required: return current active event or None
+    # -------------------------------
+    @property
+    def event(self) -> CalendarEvent | None:
+        """Return the currently active event."""
+        return self._current_event
+
+    # -------------------------------
+    # Required: return list of events for UI calendar view
+    # -------------------------------
+    async def async_get_events(self, hass, start_date, end_date):
+        """Return all schedule events in the given period."""
         events = []
-        schedule = self._read_schedule()
-        current = dt_util.start_of_local_day(start_date)
-        while current <= end_date:
-            wd = str(current.weekday())
-            periods = schedule.get(wd, [])
-            for minute,temp in periods:
-                event_start = current + timedelta(minutes=minute)
-                if start_date <= event_start <= end_date:
-                    events.append(CalendarEvent(start=event_start, end=event_start+timedelta(minutes=30), summary=f"{temp/10:.1f}°C", description=str(temp), uid=f"{wd}-{minute}-{temp}" ))
-            current += timedelta(days=1)
+
+        tt = self.coordinator.data.get("tt", {})
+
+        for day_index, day in tt.items():
+            if not day:
+                continue
+
+            weekday = int(day_index)
+
+            # find first date matching this weekday >= start_date
+            date_cursor = start_date
+            while date_cursor.weekday() != weekday:
+                date_cursor += timedelta(days=1)
+
+            while date_cursor <= end_date:
+                for entry in day:
+                    minute, temp = entry
+                    start = datetime.datetime.combine(
+                        date_cursor.date(), datetime.time.min
+                    ) + timedelta(minutes=minute)
+
+                    # End is beginning of next entry or end of day
+                    events.append(
+                        CalendarEvent(
+                            summary=f"{temp/10:.1f}°C",
+                            start=start,
+                            end=start + timedelta(minutes=1),
+                        )
+                    )
+
+                date_cursor += timedelta(days=7)
+
         return events
 
-    async def async_get_events(self, hass, start_date, end_date):
-        return self._tt_to_events(start_date, end_date)
+    # -------------------------------
+    # Handle coordinator updates
+    # -------------------------------
+    async def async_update(self):
+        await super().async_update()
+        self._update_current_event()
 
-    async def async_create_event(self, **kwargs):
-        start = kwargs.get('start_date_time') or kwargs.get('start_date')
-        if start is None:
-            return
-        temp = None
-        if (desc := kwargs.get('description')):
-            try:
-                temp = int(desc)
-            except:
-                pass
-        if temp is None and (summary := kwargs.get('summary')):
-            try:
-                temp = int(float(summary.rstrip('°C'))*10)
-            except:
-                pass
-        if temp is None:
-            return
-        wd = str(start.weekday())
-        minute = start.hour*60 + start.minute
-        tt = self._read_schedule()
-        tt.setdefault(wd, [])
-        tt[wd].append([minute,temp])
-        await self.coordinator.api.set_schedule(int(wd), tt[wd], sn=self.coordinator.serial)
-        await self.coordinator.async_request_refresh()
+    def _update_current_event(self):
+        """Calculate currently active event."""
+        now = datetime.datetime.now()
+        tt = self.coordinator.data.get("tt", {})
 
-    async def async_update_event(self, uid, **kwargs):
-        await self.async_delete_event(uid)
-        await self.async_create_event(**kwargs)
+        day = str(now.weekday())
+        today_schedule = tt.get(day)
 
-    async def async_delete_event(self, uid):
-        try:
-            wd, minute_str, temp_str = uid.split('-')
-            minute = int(minute_str); temp = int(temp_str)
-        except:
+        if not today_schedule:
+            self._current_event = None
             return
-        tt = self._read_schedule()
-        if wd in tt:
-            tt[wd] = [p for p in tt[wd] if not (p[0]==minute and p[1]==temp)]
-        await self.coordinator.api.set_schedule(int(wd), tt.get(wd, []), sn=self.coordinator.serial)
-        await self.coordinator.async_request_refresh()
+
+        minutes = now.hour * 60 + now.minute
+        last_entry = None
+
+        for entry in today_schedule:
+            start_min, temp = entry
+            if minutes >= start_min:
+                last_entry = entry
+            else:
+                break
+
+        if last_entry:
+            start_min, temp = last_entry
+            start = datetime.datetime.combine(
+                now.date(), datetime.time.min
+            ) + timedelta(minutes=start_min)
+
+            # End of event → next entry or end-of-day
+            next_index = today_schedule.index(last_entry) + 1
+            if next_index < len(today_schedule):
+                next_start = today_schedule[next_index][0]
+                end = datetime.datetime.combine(
+                    now.date(), datetime.time.min
+                ) + timedelta(minutes=next_start)
+            else:
+                end = datetime.datetime.combine(
+                    now.date(), datetime.time.max
+                )
+
+            self._current_event = CalendarEvent(
+                summary=f"{temp / 10:.1f}°C",
+                start=start,
+                end=end,
+            )
+        else:
+            self._current_event = None
