@@ -1,5 +1,6 @@
 import datetime
 from datetime import timedelta
+from homeassistant.core import HomeAssistant
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
