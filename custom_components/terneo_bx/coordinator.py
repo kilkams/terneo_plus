@@ -108,12 +108,12 @@ class TerneoCoordinator(DataUpdateCoordinator):
             manual_floor_raw = params_dict.get(5)
             manual_floor = int(manual_floor_raw) if manual_floor_raw else None
             
-             # ID=17: power - нагрузка
+            # ID=17: power - нагрузка
             power_w_raw = params_dict.get(17)
-            if power_w_raw <= 150:                
+            if int(power_w_raw) <= 150:                
                 power_w = int(power_w_raw) * 10 
-            elif power_w_raw > 150: 
-                power_w = (1500 + int(power_w_raw)) * 20
+            elif int(power_w_raw) > 150: 
+                power_w = 1500 + (int(power_w_raw) * 20)
             else: 
                 power_w = None    
 
@@ -139,6 +139,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             histeresis = None
             power_off = 0
             hvac_mode = 0
+            power_w = None
 
         # Итоговые данные
         return {
