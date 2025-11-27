@@ -5,6 +5,9 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
 from .const import DOMAIN
+import logging
+_LOGGER = logging.getLogger(__name__)
+
 
 WEEKDAYS = ["0", "1", "2", "3", "4", "5", "6"]  # Monday–Sunday
 
@@ -41,7 +44,7 @@ class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
         events = []
 
         tt = self.coordinator.data.get("tt", {})
-
+        _LOGGER.warning("Terneo calendar: start=%s end=%s tt=%s", start_date, end_date, tt)
         for day_index, day in tt.items():
             if not day:
                 continue

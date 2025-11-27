@@ -49,7 +49,7 @@ class TerneoApi:
         body = {"cmd": CMD_SET_PARAM, "par": [[par_index, value]]}
         if sn or self.sn:
             body["sn"] = sn or self.sn
-        _LOGGER.warning("Body for set param", body)
+        _LOGGER.warning("Body for set param body=%s sn=%s self.sn=%s", body, sn, self.sn)
         return await self._post(body)
 
     async def set_schedule(self, day: int, periods: list, sn: str | None = None):
