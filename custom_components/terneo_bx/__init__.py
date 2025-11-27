@@ -21,7 +21,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data.get("scan_interval", DEFAULT_SCAN_INTERVAL)
     )
 
-    api = TerneoApi(host)
+    api = TerneoApi(host, sn=serial)
 
     coordinator = TerneoCoordinator(
         hass=hass,
