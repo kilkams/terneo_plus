@@ -50,7 +50,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
         self._serial = coordinator.serial
 
         self._attr_name = f"Terneo {self._host}"
-        self._attr_unique_id = f"{DOMAIN}_{self._serial}"
+        self._attr_unique_id = f"Terneo_{self._serial}"
 
     @property
     def device_info(self) -> DeviceInfo:
