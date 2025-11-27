@@ -1,43 +1,64 @@
 from __future__ import annotations
 import logging
-from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityFeature,
+    HVACMode
+)
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.entity import DeviceInfo
+
 from .const import DOMAIN, PAR_TARGET_TEMP
 from .api import TerneoApi, CannotConnect
 from .coordinator import TerneoCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-MODE_MAP = {0: HVACMode.OFF, 1: HVACMode.AUTO, 3: HVACMode.HEAT}
+# соответствие кодов тернео → HA
+MODE_MAP = {
+    0: HVACMode.OFF,
+    3: HVACMode.HEAT,   # реальный рабочий режим
+}
+
+# обратное соответствие
 REVERSE_MODE_MAP = {v: k for k, v in MODE_MAP.items()}
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
-    coordinator = data['coordinator']
-    api = data['api']
-    async_add_entities([TerneoClimate(coordinator, api, entry.data.get('host'))], True)
+    coordinator: TerneoCoordinator = data["coordinator"]
+    api: TerneoApi = data["api"]
+
+    async_add_entities([
+        TerneoClimate(
+            coordinator=coordinator,
+            api=api
+        )
+    ], True)
 
 
 class TerneoClimate(CoordinatorEntity, ClimateEntity):
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
-    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO]
+    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
 
-    def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str):
+    def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi):
         super().__init__(coordinator)
         self.api = api
-        self._host = host
-        self._attr_name = f"Terneo {host}"
+        self._host = coordinator.host
+        self._serial = coordinator.serial
+
+        self._attr_name = f"Terneo {self._host}"
+        self._attr_unique_id = f"{DOMAIN}_{self._serial}"
 
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={(DOMAIN, self._host)},
+            identifiers={(DOMAIN, self._serial)},
             name=f"Terneo {self._host}",
-            manufacturer="Terneo"
+            manufacturer="Terneo",
+            model="Terneo BX"
         )
 
     @property
@@ -58,8 +79,9 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
             return
         try:
             await self.api.set_parameter(
-                PAR_TARGET_TEMP, int(temperature),
-                sn=self.coordinator.serial
+                PAR_TARGET_TEMP,
+                int(temperature),
+                sn=self._serial
             )
             await self.coordinator.async_request_refresh()
         except CannotConnect:
@@ -70,10 +92,13 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
         if mode_code is None:
             _LOGGER.error("Unsupported HVAC mode %s", hvac_mode)
             return
+
         try:
+            # параметр 17 — режим работы
             await self.api.set_parameter(
-                17, mode_code,
-                sn=self.coordinator.serial
+                17,
+                mode_code,
+                sn=self._serial
             )
             await self.coordinator.async_request_refresh()
         except CannotConnect:
