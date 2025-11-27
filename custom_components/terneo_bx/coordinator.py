@@ -73,6 +73,9 @@ class TerneoCoordinator(DataUpdateCoordinator):
             raw_pwr = telemetry.get("m.2")
             power = 1 if (raw_pwr is not None and int(raw_pwr) > 0) else 0
 
+            # Уровень сигнала WiFi (o.0) - если нужен
+            wifi_rssi = int(telemetry.get("o.0", 0)) if telemetry.get("o.0") else None
+
         except (ValueError, TypeError) as e:
             raise UpdateFailed(f"Invalid telemetry payload: {e}")
 
@@ -105,6 +108,15 @@ class TerneoCoordinator(DataUpdateCoordinator):
             manual_floor_raw = params_dict.get(5)
             manual_floor = int(manual_floor_raw) if manual_floor_raw else None
             
+             # ID=17: power - нагрузка
+            power_w_raw = params_dict.get(17)
+            if power_w_raw <= 150:                
+                power_w = int(power_w_raw) * 10 
+            elif power_w_raw > 150: 
+                power_w = (1500 + int(power_w_raw)) * 20
+            else: 
+                power_w = None    
+
             # ID=19: histeresis - гистерезис в 1/10 °C
             histeresis_raw = params_dict.get(19)
             histeresis = int(histeresis_raw) / 10 if histeresis_raw else None
@@ -134,6 +146,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             "temp_floor": temp_floor,
             "temp_external": temp_external,
             "power": power,
+            "power_w": power_w,
             "target_temp": target_temp,
             "mode": mode,
             "control_type": control_type,
@@ -142,6 +155,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             "histeresis": histeresis,
             "power_off": power_off,
             "hvac_mode": hvac_mode,
+            "wifi_rssi": wifi_rssi,
             "schedule": tt,
             "time": time_data.get("time") if time_data else None,
             "params_dict": params_dict,
