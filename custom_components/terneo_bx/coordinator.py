@@ -17,7 +17,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             update_interval=update_interval,
         )
         self.api = api
-        self.serial = serial   # ← добавлено
+        self.serial = serial
 
     async def _async_update_data(self):
         """Fetch full Terneo state."""
@@ -56,35 +56,34 @@ class TerneoCoordinator(DataUpdateCoordinator):
 
         # Преобразуем структуру Terneo BX → нормальная
         try:
-            temp_air = int(telemetry.get("t.0")) / 10 if telemetry.get("t.0") else None
-            temp_floor = int(telemetry.get("t.1")) / 10 if telemetry.get("t.1") else None
-
-            # статус реле — m.2 (у тебя там 49, но бывает 0/1)
+            # Температура воздуха (t.0) - делим на 10 для получения градусов
+            temp_air = int(telemetry.get("t.0", 0)) / 10 if telemetry.get("t.0") else None
+            
+            # Температура пола (t.1) - делим на 10
+            temp_floor = int(telemetry.get("t.1", 0)) / 10 if telemetry.get("t.1") else None
+            
+            # Дополнительный датчик температуры (t.5) - если нужен
+            temp_external = int(telemetry.get("t.5", 0)) / 10 if telemetry.get("t.5") else None
+            
+            # Статус реле (m.2) - любое значение > 0 означает включено
             raw_pwr = telemetry.get("m.2")
-            if raw_pwr is not None:
-                power = 1 if int(raw_pwr) > 0 else 0
-            else:
-                power = None
+            power = 1 if (raw_pwr is not None and int(raw_pwr) > 0) else 0
 
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             raise UpdateFailed(f"Invalid telemetry payload: {e}")
-
-        # Разбор телеметрии
-        temp_air = tl.get("0")
-        temp_floor = tl.get("1")
-        power = tl.get("pwr")
 
         # Разбор параметров
         try:
-            target_temp = par[2]
+            target_temp = par[2]  # целевая температура
             mode = par[17]  # режим отопления
-        except Exception:
-            raise UpdateFailed("Params structure mismatch")
+        except (IndexError, TypeError) as e:
+            raise UpdateFailed(f"Params structure mismatch: {e}")
 
         # Итоговые данные
         return {
             "temp_air": temp_air,
             "temp_floor": temp_floor,
+            "temp_external": temp_external,  # дополнительный датчик
             "power": power,
             "target_temp": target_temp,
             "mode": mode,
