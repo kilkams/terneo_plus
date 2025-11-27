@@ -9,7 +9,7 @@ _LOGGER = logging.getLogger(__name__)
 class TerneoCoordinator(DataUpdateCoordinator):
     """Coordinator for Terneo BX."""
 
-    def __init__(self, hass, api, update_interval, serial):
+    def __init__(self, hass, api, update_interval, serial, host):  
         super().__init__(
             hass,
             _LOGGER,
@@ -18,6 +18,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
         )
         self.api = api
         self.serial = serial
+        self.host = host  
 
     async def _async_update_data(self):
         """Fetch full Terneo state."""
