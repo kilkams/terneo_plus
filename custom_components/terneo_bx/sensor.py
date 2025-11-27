@@ -35,7 +35,7 @@ class TerneoCoordinatorSensor(CoordinatorEntity, SensorEntity):
         self._host = host
         self._key = key
         self._attr_name = f"Terneo {host} {title}"
-        self._attr_unique_id = f"terneo_{coordinator.serial}_{key}"
+        self._attr_unique_id = f"terneo_{host}_{key}"
         self._attr_device_class = dev_class
         self._attr_native_unit_of_measurement = unit
         self._attr_state_class = SensorStateClass.MEASUREMENT
