@@ -47,7 +47,13 @@ class TerneoApi:
 
     # WRITE: set parameter (must include sn when writing)
     async def set_parameter(self, param_id: int, value: Any, sn: str | None = None):
-        body = {"cmd": CMD_SET_PARAM, "par": [[param_id, value]]}
+        param_type = PARAM_TYPES.get(param_id)
+        
+        if param_type is None:
+            _LOGGER.warning(f"Unknown parameter type for ID={param_id}, using default type 2 (uint8)")
+            param_type = 2
+        
+        body = {"cmd": CMD_SET_PARAM, "par": [[param_id, param_type, str(value)]]}
         if sn or self.sn:
             body["sn"] = sn or self.sn        
         _LOGGER.warning("Body for set param body=%s ", body)
