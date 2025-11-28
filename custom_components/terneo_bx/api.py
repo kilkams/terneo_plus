@@ -21,7 +21,6 @@ class TerneoApi:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(url, json=payload) as resp:
                         raw = await resp.text()
-                        _LOGGER.warning("API RAW RESPONSE: %s", raw)
                         if resp.status != 200:
                             raise CannotConnect(f"HTTP {resp.status}: {raw}")
                         try:
@@ -56,8 +55,6 @@ class TerneoApi:
         body = {"cmd": CMD_SET_PARAM, "par": [[param_id, param_type, str(value)]]}
         if sn or self.sn:
             body["sn"] = sn or self.sn        
-        _LOGGER.warning("Body for set param body=%s ", body)
-        _LOGGER.warning("Setting parameter: param_id=%s, value=%s, sn=%s", param_id, value, body.get("sn"))
         return await self._post(body)
 
     async def set_schedule(self, day: int, periods: list, sn: str | None = None):
