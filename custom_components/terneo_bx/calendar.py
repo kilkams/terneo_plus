@@ -36,52 +36,60 @@ class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
         """Return the currently active event."""
         return self._current_event
 
-    async def async_get_events(self, hass, start_date, end_date):
-        """Return all schedule events in the given period."""
-        events = []
+async def async_get_events(self, hass, start_date, end_date):
+    """Return all schedule events in the given period."""
+    events = []
 
-        # timezone-aware
-        tz = datetime.datetime.now().astimezone().tzinfo
+    tz = datetime.datetime.now().astimezone().tzinfo
+    tt = self.coordinator.data.get("tt", {})
+    _LOGGER.warning("Terneo calendar: start=%s end=%s tt=%s", start_date, end_date, tt)
 
-        tt = self.coordinator.data.get("tt", {})
-        _LOGGER.warning("Terneo calendar: start=%s end=%s tt=%s", start_date, end_date, tt)
+    for day_index, day in tt.items():
+        if not day:
+            continue
 
-        for day_index, day in tt.items():
-            if not day:
-                continue
+        weekday = int(day_index)
+        date_cursor = start_date
 
-            weekday = int(day_index)
-            date_cursor = start_date
+        # find first matching weekday ≥ start_date
+        while date_cursor.weekday() != weekday:
+            date_cursor += timedelta(days=1)
 
-            # rotate to the correct weekday
-            while date_cursor.weekday() != weekday:
-                date_cursor += timedelta(days=1)
+        while date_cursor <= end_date:
+            for idx, entry in enumerate(day):
+                minute, temp = entry
 
-            while date_cursor <= end_date:
-                for entry in day:
-                    minute, temp = entry
+                start = (
+                    datetime.datetime.combine(
+                        date_cursor.date(), datetime.time.min, tzinfo=tz
+                    ) + timedelta(minutes=minute)
+                )
 
-                    start = (
+                # END = next segment start OR end of day
+                if idx + 1 < len(day):
+                    next_minute = day[idx + 1][0]
+                    end = (
                         datetime.datetime.combine(
-                            date_cursor.date(),
-                            datetime.time.min,
-                            tzinfo=tz
-                        ) + timedelta(minutes=minute)
+                            date_cursor.date(), datetime.time.min, tzinfo=tz
+                        ) + timedelta(minutes=next_minute)
+                    )
+                else:
+                    # last segment → end of day
+                    end = datetime.datetime.combine(
+                        date_cursor.date(), datetime.time.max, tzinfo=tz
                     )
 
-                    end = start + timedelta(minutes=1)
-
-                    events.append(
-                        CalendarEvent(
-                            summary=f"{temp / 10:.1f}°C",
-                            start=start,
-                            end=end,
-                        )
+                events.append(
+                    CalendarEvent(
+                        summary=f"{temp / 10:.1f}°C",
+                        start=start,
+                        end=end,
                     )
+                )
 
-                date_cursor += timedelta(days=7)
+            date_cursor += timedelta(days=7)
 
-        return events
+    return events
 
     async def async_update(self):
         await super().async_update()
