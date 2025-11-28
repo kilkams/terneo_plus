@@ -102,6 +102,20 @@ service: terneo_bx.reset_energy
 data:
   entity_id: sensor.terneo_192_168_1_100_energy
 ```
+
+### Blink the indicator (to identify the device)
+```yaml
+service: terneo_bx.blink
+data:
+  entity_id: climate.terneo_192_168_15_240
+```
+
+### Reboot device
+```yaml
+service: terneo_bx.restart
+data:
+  entity_id: climate.terneo_192_168_15_240
+```
 ## How It Works
 
 ### Power Calculation
