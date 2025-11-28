@@ -3,8 +3,68 @@
   "config": {
     "step": {
       "user": {
-        "title": "Terneo BX",
-        "description": "\u0414\u043e\u0431\u0430\u0432\u044c\u0442\u0435 \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u043e Terneo \u043f\u043e IP \u0438\u043b\u0438 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043f\u043e\u0438\u0441\u043a"
+        "title": "Настройка Terneo BX",
+        "description": "Введите IP-адрес термостата Terneo.",
+        "data": {
+          "host": "IP-адрес устройства"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Не удалось подключиться к устройству.",
+      "invalid_response": "Некорректный ответ от устройства.",
+      "unknown": "Неизвестная ошибка."
+    },
+    "abort": {
+      "already_configured": "Это устройство уже добавлено."
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "title": "Параметры Terneo BX",
+        "description": "Настройте дополнительные параметры интеграции.",
+        "data": {
+          "update_interval": "Интервал обновления (сек.)",
+          "enable_calendar": "Включить календарь расписания",
+          "debug_logs": "Включить расширенный лог"
+        }
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "terneo": {
+        "name": "Термостат",
+        "state": {
+          "heat": "Обогрев",
+          "off": "Выключено"
+        }
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Температура пола"
+      },
+      "air_temperature": {
+        "name": "Температура воздуха"
+      },
+      "power": {
+        "name": "Потребляемая мощность"
+      }
+    },
+    "binary_sensor": {
+      "relay": {
+        "name": "Состояние реле",
+        "state": {
+          "on": "Включено",
+          "off": "Выключено"
+        }
+      }
+    },
+    "calendar": {
+      "schedule": {
+        "name": "Расписание"
       }
     }
   }

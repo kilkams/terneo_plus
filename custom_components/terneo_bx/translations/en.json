@@ -3,8 +3,68 @@
   "config": {
     "step": {
       "user": {
-        "title": "Terneo BX",
-        "description": "Add your Terneo device by IP address or use discovery"
+        "title": "Terneo BX setup",
+        "description": "Enter the IP address of your Terneo thermostat.",
+        "data": {
+          "host": "Device IP address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the device.",
+      "invalid_response": "Invalid response from the device.",
+      "unknown": "Unknown error."
+    },
+    "abort": {
+      "already_configured": "This device is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "title": "Terneo BX options",
+        "description": "Configure integration settings.",
+        "data": {
+          "update_interval": "Update interval (seconds)",
+          "enable_calendar": "Enable schedule calendar",
+          "debug_logs": "Enable debug logs"
+        }
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "terneo": {
+        "name": "Thermostat",
+        "state": {
+          "heat": "Heating",
+          "off": "Off"
+        }
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Floor temperature"
+      },
+      "air_temperature": {
+        "name": "Air temperature"
+      },
+      "power": {
+        "name": "Power consumption"
+      }
+    },
+    "binary_sensor": {
+      "relay": {
+        "name": "Relay state",
+        "state": {
+          "on": "On",
+          "off": "Off"
+        }
+      }
+    },
+    "calendar": {
+      "schedule": {
+        "name": "Schedule"
       }
     }
   }

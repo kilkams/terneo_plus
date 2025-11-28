@@ -1,0 +1,71 @@
+{
+  "title": "Terneo BX",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Налаштування Terneo BX",
+        "description": "Введіть IP-адресу термостата Terneo.",
+        "data": {
+          "host": "IP-адреса пристрою"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Не вдалося підключитися до пристрою.",
+      "invalid_response": "Неправильна відповідь від пристрою.",
+      "unknown": "Невідома помилка."
+    },
+    "abort": {
+      "already_configured": "Цей пристрій уже додано."
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "title": "Параметри Terneo BX",
+        "description": "Налаштуйте додаткові параметри інтеграції.",
+        "data": {
+          "update_interval": "Інтервал оновлення (сек.)",
+          "enable_calendar": "Увімкнути календар розкладу",
+          "debug_logs": "Увімкнути розширений лог"
+        }
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "terneo": {
+        "name": "Термостат",
+        "state": {
+          "heat": "Обігрів",
+          "off": "Вимкнено"
+        }
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Температура підлоги"
+      },
+      "air_temperature": {
+        "name": "Температура повітря"
+      },
+      "power": {
+        "name": "Споживана потужність"
+      }
+    },
+    "binary_sensor": {
+      "relay": {
+        "name": "Стан реле",
+        "state": {
+          "on": "Увімкнено",
+          "off": "Вимкнено"
+        }
+      }
+    },
+    "calendar": {
+      "schedule": {
+        "name": "Розклад"
+      }
+    }
+  }
+}
