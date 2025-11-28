@@ -6,7 +6,7 @@
   "version": "0.2.4",
   "integration_type": "hub",
   "iot_class": "local_polling",
-  "zip_release": true,
+  "zip_release": false,
   "config_flow": true,
   "content_in_root": true,
   "codeowners": [
