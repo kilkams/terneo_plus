@@ -69,9 +69,9 @@ class TerneoCoordinator(DataUpdateCoordinator):
             # Дополнительный датчик температуры (t.5) - если нужен
             temp_external = round((int(telemetry.get("t.5", 0)) / 16), 2) if telemetry.get("t.5") else None
             
-            # Статус реле (m.2) - любое значение > 0 означает включено
-            raw_pwr = telemetry.get("m.2")
-            power = 1 if (raw_pwr is not None and int(raw_pwr) > 0) else 0
+            # Статус реле (f.0) - любое значение > 0 означает включено
+            raw_pwr = telemetry.get("f.0")
+            power = int(raw_pwr) if raw_pwr else 0
 
             # Уровень сигнала WiFi (o.0) - если нужен
             wifi_rssi = int(telemetry.get("o.0", 0)) if telemetry.get("o.0") else None
