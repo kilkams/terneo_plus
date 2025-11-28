@@ -13,7 +13,6 @@ SENSOR_DEFS = [
     ('temp_air','Air Temperature', SensorDeviceClass.TEMPERATURE, '°C', SensorStateClass.MEASUREMENT),
     ('temp_floor','Floor Temperature', SensorDeviceClass.TEMPERATURE, '°C', SensorStateClass.MEASUREMENT),
     ('target_temp','Target Temperature', SensorDeviceClass.TEMPERATURE, '°C', SensorStateClass.MEASUREMENT),
-    ('power_w','Power', None, 'W'),
     ('wifi_rssi','WiFi RSSI', SensorDeviceClass.SIGNAL_STRENGTH, 'dBm', SensorStateClass.MEASUREMENT),
 ]
 

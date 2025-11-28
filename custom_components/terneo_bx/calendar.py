@@ -6,10 +6,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
 from .const import DOMAIN
 import logging
+
 _LOGGER = logging.getLogger(__name__)
 
-
 WEEKDAYS = ["0", "1", "2", "3", "4", "5", "6"]  # Monday–Sunday
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     """Setup Terneo schedule calendar."""
@@ -20,6 +21,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     device_id = coordinator.serial
 
     async_add_entities([TerneoScheduleCalendar(coordinator, name, device_id)], True)
+
+
 class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
     def __init__(self, coordinator, name, device_id):
         super().__init__(coordinator)
@@ -28,47 +31,51 @@ class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
         self._attr_unique_id = f"Terneo_{self._attr_name}_schedule"
         self._current_event = None
 
-    # -------------------------------
-    # Required: return current active event or None
-    # -------------------------------
     @property
     def event(self) -> CalendarEvent | None:
         """Return the currently active event."""
         return self._current_event
 
-    # -------------------------------
-    # Required: return list of events for UI calendar view
-    # -------------------------------
     async def async_get_events(self, hass, start_date, end_date):
         """Return all schedule events in the given period."""
         events = []
 
+        # timezone-aware
+        tz = datetime.datetime.now().astimezone().tzinfo
+
         tt = self.coordinator.data.get("tt", {})
         _LOGGER.warning("Terneo calendar: start=%s end=%s tt=%s", start_date, end_date, tt)
+
         for day_index, day in tt.items():
             if not day:
                 continue
 
             weekday = int(day_index)
-
-            # find first date matching this weekday >= start_date
             date_cursor = start_date
+
+            # rotate to the correct weekday
             while date_cursor.weekday() != weekday:
                 date_cursor += timedelta(days=1)
 
             while date_cursor <= end_date:
                 for entry in day:
                     minute, temp = entry
-                    start = datetime.datetime.combine(
-                        date_cursor.date(), datetime.time.min
-                    ) + timedelta(minutes=minute)
 
-                    # End is beginning of next entry or end of day
+                    start = (
+                        datetime.datetime.combine(
+                            date_cursor.date(),
+                            datetime.time.min,
+                            tzinfo=tz
+                        ) + timedelta(minutes=minute)
+                    )
+
+                    end = start + timedelta(minutes=1)
+
                     events.append(
                         CalendarEvent(
-                            summary=f"{temp/10:.1f}°C",
+                            summary=f"{temp / 10:.1f}°C",
                             start=start,
-                            end=start + timedelta(minutes=1),
+                            end=end,
                         )
                     )
 
@@ -76,18 +83,16 @@ class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
 
         return events
 
-    # -------------------------------
-    # Handle coordinator updates
-    # -------------------------------
     async def async_update(self):
         await super().async_update()
         self._update_current_event()
 
     def _update_current_event(self):
         """Calculate currently active event."""
-        now = datetime.datetime.now()
-        tt = self.coordinator.data.get("tt", {})
+        now = datetime.datetime.now().astimezone()
+        tz = now.tzinfo
 
+        tt = self.coordinator.data.get("tt", {})
         day = str(now.weekday())
         today_schedule = tt.get(day)
 
@@ -107,20 +112,32 @@ class TerneoScheduleCalendar(CoordinatorEntity, CalendarEntity):
 
         if last_entry:
             start_min, temp = last_entry
-            start = datetime.datetime.combine(
-                now.date(), datetime.time.min
-            ) + timedelta(minutes=start_min)
 
-            # End of event → next entry or end-of-day
+            start = (
+                datetime.datetime.combine(
+                    now.date(),
+                    datetime.time.min,
+                    tzinfo=tz
+                ) + timedelta(minutes=start_min)
+            )
+
+            # determine end
             next_index = today_schedule.index(last_entry) + 1
+
             if next_index < len(today_schedule):
                 next_start = today_schedule[next_index][0]
-                end = datetime.datetime.combine(
-                    now.date(), datetime.time.min
-                ) + timedelta(minutes=next_start)
+                end = (
+                    datetime.datetime.combine(
+                        now.date(),
+                        datetime.time.min,
+                        tzinfo=tz
+                    ) + timedelta(minutes=next_start)
+                )
             else:
                 end = datetime.datetime.combine(
-                    now.date(), datetime.time.max
+                    now.date(),
+                    datetime.time.max,
+                    tzinfo=tz
                 )
 
             self._current_event = CalendarEvent(
