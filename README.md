@@ -101,3 +101,5 @@ Reset the energy consumption counter to zero.
 service: terneo_bx.reset_energy
 data:
   entity_id: sensor.terneo_192_168_1_100_energy
+
+***Thanks to ChatGPT and Claude.io for their help in developing the integration.
