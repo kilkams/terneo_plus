@@ -71,7 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # запускаем платформы
     await hass.config_entries.async_forward_entry_setups(
         entry,
-        ["climate", "sensor", "binary_sensor", "calendar"]
+        ["climate", "sensor", "binary_sensor", "switch", "calendar"]
     )
 
     # Регистрируем сервис сброса счетчика энергии (только один раз)
@@ -106,6 +106,67 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         
         hass.services.async_register(DOMAIN, "reset_energy", reset_energy)
         _LOGGER.info("Registered reset_energy service")
+    if not hass.services.has_service(DOMAIN, "blink"):
+        async def blink_device(call):
+            """Заставить устройство моргнуть индикатором."""
+            entity_id = call.data.get("entity_id")
+            
+            # Получаем entry_id из entity_id
+            for entry_id, entry_data in hass.data[DOMAIN].items():
+                if entry_id == "services":
+                    continue
+                coordinator = entry_data.get("coordinator")
+                if coordinator and f"terneo_{coordinator.serial}" in entity_id:
+                    api = entry_data.get("api")
+                    try:
+                        _LOGGER.info(f"Sending blink command to {coordinator.host}")
+                        # Используем test.cgi вместо api.cgi
+                        url = f"http://{coordinator.host}/test.cgi"
+                        import aiohttp
+                        import async_timeout
+                        async with async_timeout.timeout(10):
+                            async with aiohttp.ClientSession() as session:
+                                async with session.post(url, json={"cmd": "blink"}) as resp:
+                                    if resp.status == 200:
+                                        _LOGGER.info("Blink command sent successfully")
+                                    else:
+                                        _LOGGER.error(f"Blink failed: HTTP {resp.status}")
+                    except Exception as e:
+                        _LOGGER.error(f"Error sending blink command: {e}")
+                    break
+        
+        hass.services.async_register(DOMAIN, "blink", blink_device)
+
+    if not hass.services.has_service(DOMAIN, "restart"):
+        async def restart_device(call):
+            """Перезагрузить устройство."""
+            entity_id = call.data.get("entity_id")
+            
+            # Получаем entry_id из entity_id
+            for entry_id, entry_data in hass.data[DOMAIN].items():
+                if entry_id == "services":
+                    continue
+                coordinator = entry_data.get("coordinator")
+                if coordinator and f"terneo_{coordinator.serial}" in entity_id:
+                    api = entry_data.get("api")
+                    try:
+                        _LOGGER.warning(f"Sending RESTART command to {coordinator.host}")
+                        # Используем test.cgi вместо api.cgi
+                        url = f"http://{coordinator.host}/test.cgi"
+                        import aiohttp
+                        import async_timeout
+                        async with async_timeout.timeout(10):
+                            async with aiohttp.ClientSession() as session:
+                                async with session.post(url, json={"cmd": "restart"}) as resp:
+                                    if resp.status == 200:
+                                        _LOGGER.info("Restart command sent successfully")
+                                    else:
+                                        _LOGGER.error(f"Restart failed: HTTP {resp.status}")
+                    except Exception as e:
+                        _LOGGER.error(f"Error sending restart command: {e}")
+                    break
+        
+        hass.services.async_register(DOMAIN, "restart", restart_device)
 
     _LOGGER.info("Terneo BX setup completed for %s (SN: %s)", host, serial)
     return True
@@ -116,7 +177,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     unload_ok = await hass.config_entries.async_unload_platforms(
         entry,
-        ["climate", "sensor", "binary_sensor", "calendar"]
+        ["climate", "sensor", "binary_sensor", "switch", "calendar"]
     )
 
     if unload_ok:

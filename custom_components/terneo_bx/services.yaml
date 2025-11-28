@@ -1,0 +1,42 @@
+reset_energy:
+  name: Reset Energy Counter
+  description: Reset the energy consumption counter to zero
+  fields:
+    entity_id:
+      name: Entity
+      description: Energy sensor entity to reset
+      required: true
+      selector:
+        entity:
+          domain: sensor
+          device_class: energy
+
+blink:
+  name: Blink Device
+  description: Make the device display blink (for identification)
+  fields:
+    entity_id:
+      name: Entity
+      description: Any entity from the Terneo device
+      required: true
+      selector:
+        entity:
+          domain:
+            - climate
+            - sensor
+            - switch
+
+restart:
+  name: Restart Device
+  description: Restart the Terneo device (USE WITH CAUTION!)
+  fields:
+    entity_id:
+      name: Entity
+      description: Any entity from the Terneo device
+      required: true
+      selector:
+        entity:
+          domain:
+            - climate
+            - sensor
+            - switch

@@ -101,5 +101,27 @@ Reset the energy consumption counter to zero.
 service: terneo_bx.reset_energy
 data:
   entity_id: sensor.terneo_192_168_1_100_energy
+```
+## How It Works
 
-***Thanks to ChatGPT and Claude.io for their help in developing the integration.
+### Power Calculation
+
+The integration decodes the power parameter (ID=17) from the device:
+```python
+if encoded_power <= 150:
+    power_watts = encoded_power * 10
+else:
+    power_watts = 1500 + (encoded_power * 20)
+```
+
+Power is only reported when the heating relay is active, otherwise shows 0W.
+
+### Energy Calculation
+
+Energy is calculated using the trapezoidal method:
+- Samples power consumption at each coordinator update
+- Calculates average power between updates
+- Accumulates energy: `kWh = (average_power × time_hours) / 1000`
+- Only counts when heating relay is on
+
+***Thanks to ChatGPT and Claude.ai for their help in developing the integration.
