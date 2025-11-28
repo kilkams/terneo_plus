@@ -19,6 +19,9 @@ Home Assistant integration for Terneo BX smart thermostats with local API suppor
 - **Energy**: Total energy consumption counter (kWh) with reset service
 - **WiFi RSSI**: Signal strength indicator (dBm)
 
+For the energy sensor to work, you need to correctly specify the power of the connected load.
+You need to measure the voltage and current. Use the formula U*I.
+
 ### Binary Sensors
 - **Heating Active**: Shows when the heating relay is on/off
 
