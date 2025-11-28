@@ -118,6 +118,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
                 return
             
             await self.coordinator.async_request_refresh()
+            
         except CannotConnect:
             _LOGGER.error("Cannot connect to set HVAC mode")
         except Exception as e:
