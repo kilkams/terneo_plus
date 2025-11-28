@@ -89,6 +89,14 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
             return
         
         try:
+            # 1. Переключаем в ручной режим обогрева
+            power_off = self.coordinator.data.get("power_off", 0)
+            current_mode = self.coordinator.data.get("mode", 0)
+            
+            if power_off == 1 or current_mode == 0:
+                await self.api.set_parameter(125, 0, self._serial)  # Включить
+                await self.api.set_parameter(2, 1, self._serial)     # Ручной режим
+            
             # ID=31 - setTemperature
             await self.api.set_parameter(31, int(temperature), self._serial)
             await self.coordinator.async_refresh()
