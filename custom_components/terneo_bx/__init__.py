@@ -74,7 +74,71 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ["climate", "sensor", "binary_sensor", "switch", "calendar"]
     )
 
-    # Регистрируем сервис сброса счетчика энергии (только один раз)
+    # Регистрируем сервисы (только один раз)
+    await _register_services(hass)
+
+    _LOGGER.info("Terneo BX setup completed for %s (SN: %s)", host, serial)
+    return True
+
+
+async def _register_services(hass: HomeAssistant):
+    """Register integration services."""
+    
+    async def _find_device_by_entity(entity_id: str):
+        """Найти устройство по entity_id."""
+        _LOGGER.debug(f"Searching for device with entity_id: {entity_id}")
+        
+        for entry_id, entry_data in hass.data[DOMAIN].items():
+            coordinator = entry_data.get("coordinator")
+            if not coordinator:
+                continue
+            
+            # Проверяем по serial или host в entity_id
+            # entity_id может быть вида: climate.terneo_192_168_15_241
+            # или sensor.terneo_SERIAL_power_w
+            if (coordinator.serial and coordinator.serial.lower() in entity_id.lower()) or \
+               (coordinator.host and coordinator.host.replace(".", "_") in entity_id):
+                _LOGGER.debug(f"Found device: host={coordinator.host}, serial={coordinator.serial}")
+                return coordinator.host
+        
+        _LOGGER.error(f"Could not find device for entity_id: {entity_id}")
+        return None
+    
+    async def _send_test_command(entity_id: str, cmd: str) -> bool:
+        """Отправить команду на test.cgi endpoint."""
+        if not entity_id:
+            _LOGGER.error(f"entity_id is required for {cmd} service")
+            return False
+        
+        host = await _find_device_by_entity(entity_id)
+        if not host:
+            return False
+        
+        try:
+            _LOGGER.info(f"Sending '{cmd}' command to {host}")
+            url = f"http://{host}/test.cgi"
+            
+            import aiohttp
+            import async_timeout
+            
+            async with async_timeout.timeout(10):
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json={"cmd": cmd}) as resp:
+                        result = await resp.text()
+                        _LOGGER.debug(f"Response from {host}: {result}")
+                        
+                        if resp.status == 200:
+                            _LOGGER.info(f"Command '{cmd}' sent successfully to {host}: {result}")
+                            return True
+                        else:
+                            _LOGGER.error(f"Command '{cmd}' failed: HTTP {resp.status}, response: {result}")
+                            return False
+                            
+        except Exception as e:
+            _LOGGER.error(f"Error sending '{cmd}' command to {host}: {e}", exc_info=True)
+            return False
+    
+    # Сервис reset_energy
     if not hass.services.has_service(DOMAIN, "reset_energy"):
         async def reset_energy(call):
             """Сброс счетчика энергии."""
@@ -92,7 +156,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.error(f"Entity {entity_id} not found")
                 return
             
-            # Получаем объект entity из hass.states
+            # Получаем объект entity
             entity = hass.data["entity_components"]["sensor"].get_entity(entity_id)
             
             if entity and hasattr(entity, '_total_energy'):
@@ -106,70 +170,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         
         hass.services.async_register(DOMAIN, "reset_energy", reset_energy)
         _LOGGER.info("Registered reset_energy service")
+    
+    # Сервис blink
     if not hass.services.has_service(DOMAIN, "blink"):
         async def blink_device(call):
             """Заставить устройство моргнуть индикатором."""
             entity_id = call.data.get("entity_id")
-            
-            # Получаем entry_id из entity_id
-            for entry_id, entry_data in hass.data[DOMAIN].items():
-                if entry_id == "services":
-                    continue
-                coordinator = entry_data.get("coordinator")
-                if coordinator and f"terneo_{coordinator.serial}" in entity_id:
-                    api = entry_data.get("api")
-                    try:
-                        _LOGGER.info(f"Sending blink command to {coordinator.host}")
-                        # Используем test.cgi вместо api.cgi
-                        url = f"http://{coordinator.host}/test.cgi"
-                        import aiohttp
-                        import async_timeout
-                        async with async_timeout.timeout(10):
-                            async with aiohttp.ClientSession() as session:
-                                async with session.post(url, json={"cmd": "blink"}) as resp:
-                                    if resp.status == 200:
-                                        _LOGGER.info("Blink command sent successfully")
-                                    else:
-                                        _LOGGER.error(f"Blink failed: HTTP {resp.status}")
-                    except Exception as e:
-                        _LOGGER.error(f"Error sending blink command: {e}")
-                    break
+            await _send_test_command(entity_id, "blink")
         
         hass.services.async_register(DOMAIN, "blink", blink_device)
-
+        _LOGGER.info("Registered blink service")
+    
+    # Сервис restart
     if not hass.services.has_service(DOMAIN, "restart"):
         async def restart_device(call):
             """Перезагрузить устройство."""
             entity_id = call.data.get("entity_id")
-            
-            # Получаем entry_id из entity_id
-            for entry_id, entry_data in hass.data[DOMAIN].items():
-                if entry_id == "services":
-                    continue
-                coordinator = entry_data.get("coordinator")
-                if coordinator and f"terneo_{coordinator.serial}" in entity_id:
-                    api = entry_data.get("api")
-                    try:
-                        _LOGGER.warning(f"Sending RESTART command to {coordinator.host}")
-                        # Используем test.cgi вместо api.cgi
-                        url = f"http://{coordinator.host}/test.cgi"
-                        import aiohttp
-                        import async_timeout
-                        async with async_timeout.timeout(10):
-                            async with aiohttp.ClientSession() as session:
-                                async with session.post(url, json={"cmd": "restart"}) as resp:
-                                    if resp.status == 200:
-                                        _LOGGER.info("Restart command sent successfully")
-                                    else:
-                                        _LOGGER.error(f"Restart failed: HTTP {resp.status}")
-                    except Exception as e:
-                        _LOGGER.error(f"Error sending restart command: {e}")
-                    break
+            await _send_test_command(entity_id, "restart")
         
         hass.services.async_register(DOMAIN, "restart", restart_device)
-
-    _LOGGER.info("Terneo BX setup completed for %s (SN: %s)", host, serial)
-    return True
+        _LOGGER.info("Registered restart service")
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -183,9 +203,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
         
-        # Удаляем сервис, если это последняя интеграция Terneo
+        # Удаляем сервисы, если это последняя интеграция Terneo
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, "reset_energy")
-            _LOGGER.info("Removed reset_energy service")
+            hass.services.async_remove(DOMAIN, "blink")
+            hass.services.async_remove(DOMAIN, "restart")
+            _LOGGER.info("Removed all Terneo services")
 
     return unload_ok
