@@ -21,6 +21,7 @@ class TerneoApi:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(url, json=payload) as resp:
                         raw = await resp.text()
+                        _LOGGER.warning("API RAW RESPONSE: %s", raw)
                         if resp.status != 200:
                             raise CannotConnect(f"HTTP {resp.status}: {raw}")
                         try:
@@ -46,9 +47,9 @@ class TerneoApi:
 
     # WRITE: set parameter (must include sn when writing)
     async def set_parameter(self, param_id: int, value: Any, sn: str | None = None):
-        body = {"cmd": CMD_SET_PARAM, "par": [[param_id, value]]}
         if sn or self.sn:
             body["sn"] = sn or self.sn
+        body = {"cmd": CMD_SET_PARAM, "par": [[param_id, value]]}
         _LOGGER.warning("Body for set param body=%s sn=%s self.sn=%s", body, sn, self.sn)
         return await self._post(body)
 
