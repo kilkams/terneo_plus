@@ -17,40 +17,77 @@ class TerneoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not host:
                 errors['host'] = 'host_required'
             else:
-                ok = await self._async_test_connection(host)
-                if not ok:
+                # Проверяем подключение и получаем serial
+                result = await self._async_test_connection(host)
+                if not result:
                     errors['base'] = 'cannot_connect'
                 else:
-                    return self.async_create_entry(title=f'Terneo {host}', data={'host': host, 'scan_interval': scan_interval}, options={'scan_interval': scan_interval})
-        schema = vol.Schema({vol.Required('mode', default='manual'): vol.In(['manual','discover_broadcast']), vol.Optional('host'): str, vol.Optional('scan_interval', default=DEFAULT_SCAN_INTERVAL): int})
+                    serial = result.get('serial')
+                    return self.async_create_entry(
+                        title=f'Terneo {host}',
+                        data={
+                            'host': host,
+                            'serial': serial,  # ← Сохраняем serial
+                            'scan_interval': scan_interval
+                        },
+                        options={'scan_interval': scan_interval}
+                    )
+        
+        schema = vol.Schema({
+            vol.Required('mode', default='manual'): vol.In(['manual', 'discover_broadcast']),
+            vol.Optional('host'): str,
+            vol.Optional('scan_interval', default=DEFAULT_SCAN_INTERVAL): int
+        })
         return self.async_show_form(step_id='user', data_schema=schema, errors=errors)
 
     async def async_step_discover_broadcast(self, user_input=None):
         errors = {}
         if user_input is not None:
-            port = user_input.get('port',9000)
-            timeout = user_input.get('timeout',4)
+            port = user_input.get('port', 9000)
+            timeout = user_input.get('timeout', 4)
             scan_interval = user_input.get('scan_interval', DEFAULT_SCAN_INTERVAL)
             found = await self._async_discover(port, timeout)
             if not found:
                 errors['base'] = 'not_found'
             else:
                 host = found[0]
-                ok = await self._async_test_connection(host)
-                if not ok:
+                # Проверяем подключение и получаем serial
+                result = await self._async_test_connection(host)
+                if not result:
                     errors['base'] = 'cannot_connect'
                 else:
-                    return self.async_create_entry(title=f'Terneo {host}', data={'host': host, 'scan_interval': scan_interval}, options={'scan_interval': scan_interval})
-        schema = vol.Schema({vol.Optional('port', default=9000): int, vol.Optional('timeout', default=4): int, vol.Optional('scan_interval', default=DEFAULT_SCAN_INTERVAL): int})
+                    serial = result.get('serial')
+                    return self.async_create_entry(
+                        title=f'Terneo {host}',
+                        data={
+                            'host': host,
+                            'serial': serial,  # ← Сохраняем serial
+                            'scan_interval': scan_interval
+                        },
+                        options={'scan_interval': scan_interval}
+                    )
+        
+        schema = vol.Schema({
+            vol.Optional('port', default=9000): int,
+            vol.Optional('timeout', default=4): int,
+            vol.Optional('scan_interval', default=DEFAULT_SCAN_INTERVAL): int
+        })
         return self.async_show_form(step_id='discover_broadcast', data_schema=schema, errors=errors)
 
-    async def _async_test_connection(self, host: str) -> bool:
+    async def _async_test_connection(self, host: str) -> dict | None:
+        """Проверяет подключение и возвращает данные устройства."""
         api = TerneoApi(host)
         try:
             tele = await api.get_telemetry()
-            return tele is not None
+            if tele is not None:
+                serial = tele.get("sn")
+                return {
+                    "success": True,
+                    "serial": serial
+                }
+            return None
         except Exception:
-            return False
+            return None
 
     async def _async_discover(self, port: int, timeout: int):
         loop = asyncio.get_running_loop()
