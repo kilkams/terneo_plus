@@ -101,7 +101,7 @@ class TerneoPowerSensor(CoordinatorEntity, SensorEntity):
             "configured_power": power_w,
         }
 class TerneoEnergySensor(CoordinatorEntity, SensorEntity):
-    """Счетчик энергии в kWh."""
+    """Счетчик энергии в kWh с сохранением состояния."""
     
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
@@ -110,9 +110,9 @@ class TerneoEnergySensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: TerneoCoordinator, host: str):
         super().__init__(coordinator)
         self._host = host
-        self._serial = coordinator.serial 
+        self._serial = coordinator.serial
         self._attr_name = f"Terneo {host} Energy"
-        self._attr_unique_id = f"terneo_{self._serial}_energy_kwh" 
+        self._attr_unique_id = f"terneo_{self._serial}_energy_kwh"
         self._total_energy = 0.0
         self._last_update = None
         self._last_power = 0
@@ -126,30 +126,67 @@ class TerneoEnergySensor(CoordinatorEntity, SensorEntity):
             model="Terneo BX"
         )
 
+    async def async_added_to_hass(self):
+        """Вызывается когда entity добавляется в HA."""
+        await super().async_added_to_hass()
+        
+        # Восстанавливаем последнее сохраненное значение
+        last_state = await self.async_get_last_state()
+        if last_state is not None and last_state.state not in (None, "unknown", "unavailable"):
+            try:
+                self._total_energy = float(last_state.state)
+                _LOGGER.info(f"Restored energy counter: {self._total_energy} kWh")
+                
+                # Восстанавливаем атрибуты
+                if last_state.attributes:
+                    last_update_str = last_state.attributes.get("last_update")
+                    if last_update_str:
+                        from datetime import datetime
+                        self._last_update = datetime.fromisoformat(last_update_str)
+                    
+                    self._last_power = last_state.attributes.get("current_power", 0)
+                    
+            except (ValueError, TypeError) as e:
+                _LOGGER.warning(f"Could not restore energy counter: {e}")
+                self._total_energy = 0.0
+
     @property
     def native_value(self):
         """Возвращает накопленную энергию в kWh."""
         from datetime import datetime
         
+        # Получаем текущую мощность (зависит от реле)
         relay_state = self.coordinator.data.get('power', 0)
         power_w = self.coordinator.data.get('power_w', 0)
         
+        # Реальная мощность = 0 если реле выключено
         current_power = power_w if relay_state == 1 else 0
         
+        # Вычисляем приращение энергии
         now = datetime.now()
         if self._last_update is not None:
             time_delta_hours = (now - self._last_update).total_seconds() / 3600
-            avg_power = (self._last_power + current_power) / 2
-            energy_increment = (avg_power * time_delta_hours) / 1000
-            self._total_energy += energy_increment
             
-            if energy_increment > 0:
-                _LOGGER.debug(
-                    f"Energy update: power={current_power}W, "
-                    f"time_delta={time_delta_hours:.4f}h, "
-                    f"increment={energy_increment:.6f}kWh, "
-                    f"total={self._total_energy:.3f}kWh"
+            # Защита от аномально больших интервалов (больше 1 часа)
+            # Это предотвращает скачки при перезапуске HA
+            if time_delta_hours > 1.0:
+                _LOGGER.warning(
+                    f"Large time gap detected: {time_delta_hours:.2f}h. "
+                    f"Skipping energy calculation to prevent anomaly."
                 )
+            else:
+                # Используем среднюю мощность между двумя измерениями (метод трапеций)
+                avg_power = (self._last_power + current_power) / 2
+                energy_increment = (avg_power * time_delta_hours) / 1000  # Вт*ч → кВт*ч
+                self._total_energy += energy_increment
+                
+                if energy_increment > 0.001:  # Логируем только значимые изменения
+                    _LOGGER.debug(
+                        f"Energy update: power={current_power}W, "
+                        f"time_delta={time_delta_hours:.4f}h, "
+                        f"increment={energy_increment:.6f}kWh, "
+                        f"total={self._total_energy:.3f}kWh"
+                    )
         
         self._last_update = now
         self._last_power = current_power
