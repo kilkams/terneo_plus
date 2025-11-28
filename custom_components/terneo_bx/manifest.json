@@ -3,7 +3,7 @@
   "name": "Terneo BX",
   "documentation": "https://github.com/kilkams/terneo_plus",
   "issue_tracker": "https://github.com/kilkams/terneo_plus/issues",
-  "version": "0.1.0",
+  "version": "0.2.4",
   "integration_type": "hub",
   "iot_class": "local_polling",
   "zip_release": true,
