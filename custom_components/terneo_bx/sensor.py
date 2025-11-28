@@ -3,7 +3,7 @@ import logging
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
-from .const import DOMAIN
+from .const import DOMAIN, ENERGY_UPDATE_INTERVAL_MAX, ENERGY_MIN_INCREMENT
 from .api import TerneoApi, CannotConnect
 from .coordinator import TerneoCoordinator
 
@@ -169,7 +169,7 @@ class TerneoEnergySensor(CoordinatorEntity, SensorEntity):
             
             # Защита от аномально больших интервалов (больше 1 часа)
             # Это предотвращает скачки при перезапуске HA
-            if time_delta_hours > 1.0:
+            if time_delta_hours > ENERGY_UPDATE_INTERVAL_MAX / 3600:
                 _LOGGER.warning(
                     f"Large time gap detected: {time_delta_hours:.2f}h. "
                     f"Skipping energy calculation to prevent anomaly."
