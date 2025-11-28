@@ -65,14 +65,14 @@ class TerneoPowerSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: TerneoCoordinator, host: str):
         super().__init__(coordinator)
         self._host = host
-        self._serial = coordinator.serial  # ← ДОБАВЛЕНО
+        self._serial = coordinator.serial  
         self._attr_name = f"Terneo {host} Power"
-        self._attr_unique_id = f"terneo_{self._serial}_power_w"  # ← ИСПРАВЛЕНО: используем serial
+        self._attr_unique_id = f"terneo_{self._serial}_power_w" 
 
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={(DOMAIN, self._serial)},  # ← ИСПРАВЛЕНО: используем serial
+            identifiers={(DOMAIN, self._host)}, 
             name=f"Terneo {self._host}",
             manufacturer="Terneo",
             model="Terneo BX"
@@ -120,7 +120,7 @@ class TerneoEnergySensor(CoordinatorEntity, SensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={(DOMAIN, self._serial)},
+            identifiers={(DOMAIN, self._host)},
             name=f"Terneo {self._host}",
             manufacturer="Terneo",
             model="Terneo BX"
