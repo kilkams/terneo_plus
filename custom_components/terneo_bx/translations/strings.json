@@ -1,0 +1,56 @@
+{
+  "title": "Terneo BX",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Подключение Terneo BX",
+        "description": "Введите IP-адрес терморегулятора Terneo BX.",
+        "data": {
+          "host": "IP адрес"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Не удалось подключиться к устройству",
+      "invalid_auth": "Неверный пароль/ключ",
+      "unknown": "Неизвестная ошибка"
+    },
+    "abort": {
+      "already_configured": "Это устройство уже добавлено"
+    }
+  },
+  "entity": {
+    "climate": {
+      "thermostat": {
+        "name": "Термостат"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Температура пола"
+      },
+      "air_temperature": {
+        "name": "Температура воздуха"
+      },
+      "power": {
+        "name": "Потребляемая мощность"
+      }
+    },
+    "binary_sensor": {
+      "heating": {
+        "name": "Нагрев включён"
+      }
+    },
+    "calendar": {
+      "schedule": {
+        "name": "График работы"
+      }
+    }
+  },
+  "device": {
+    "device_info": {
+      "manufacturer": "Terneo",
+      "model": "BX"
+    }
+  }
+}
