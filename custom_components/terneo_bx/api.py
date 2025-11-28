@@ -45,8 +45,8 @@ class TerneoApi:
         return await self._post({"cmd": CMD_TELEMETRY})
 
     # WRITE: set parameter (must include sn when writing)
-    async def set_parameter(self, par_index: int, value: Any, sn: str | None = None):
-        body = {"cmd": CMD_SET_PARAM, "par": [[par_index, value]]}
+    async def set_parameter(self, param_id: int, value: Any, sn: str | None = None):
+        body = {"cmd": CMD_SET_PARAM, "par": [[param_id, value]]}
         if sn or self.sn:
             body["sn"] = sn or self.sn
         _LOGGER.warning("Body for set param body=%s sn=%s self.sn=%s", body, sn, self.sn)
