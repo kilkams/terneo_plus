@@ -158,6 +158,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             "hvac_mode": hvac_mode,
             "wifi_rssi": wifi_rssi,
             "schedule": tt,
+            "tt": tt,
             "time": time_data.get("time") if time_data else None,
             "params_dict": params_dict,
             "raw": {

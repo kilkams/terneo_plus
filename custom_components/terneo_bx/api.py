@@ -47,10 +47,11 @@ class TerneoApi:
 
     # WRITE: set parameter (must include sn when writing)
     async def set_parameter(self, param_id: int, value: Any, sn: str | None = None):
-        if sn or self.sn:
-            body["sn"] = sn or self.sn
         body = {"cmd": CMD_SET_PARAM, "par": [[param_id, value]]}
-        _LOGGER.warning("Body for set param body=%s sn=%s self.sn=%s", body, sn, self.sn)
+        if sn or self.sn:
+            body["sn"] = sn or self.sn        
+        _LOGGER.warning("Body for set param body=%s ", body)
+        _LOGGER.warning("Setting parameter: param_id=%s, value=%s, sn=%s", param_id, value, body.get("sn"))
         return await self._post(body)
 
     async def set_schedule(self, day: int, periods: list, sn: str | None = None):
