@@ -29,7 +29,7 @@ class TerneoRelaySensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        val = self.coordinator.data.get('relay',0)
+        val = self.coordinator.data.get('power',0)
         try:
             return int(val) == 1
         except:

@@ -67,8 +67,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ["climate", "sensor", "binary_sensor", "calendar"]
     )
 
+    # Регистрируем сервис сброса счетчика энергии
+    async def reset_energy(call):
+        """Сброс счетчика энергии."""
+        entity_id = call.data.get("entity_id")
+        entity = hass.data[DOMAIN].get(entity_id)
+        if entity and hasattr(entity, '_total_energy'):
+            entity._total_energy = 0.0
+            entity.async_write_ha_state()
+    
+    hass.services.async_register(DOMAIN, "reset_energy", reset_energy)
+
     _LOGGER.info("Terneo BX setup completed for %s", host)
     return True
+
+
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -83,3 +96,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id, None)
 
     return unload_ok
+    

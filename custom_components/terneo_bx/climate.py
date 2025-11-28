@@ -12,6 +12,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from .const import DOMAIN
 from .api import TerneoApi, CannotConnect
 from .coordinator import TerneoCoordinator
+import asyncio
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,8 +90,17 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
             return
         
         try:
+            # 1. Переключаем в ручной режим обогрева
+            power_off = self.coordinator.data.get("power_off", 0)
+            current_mode = self.coordinator.data.get("mode", 0)
+            
+            if power_off == 1 or current_mode == 0:
+                await self.api.set_parameter(125, 0, self._serial)  # Включить
+                await self.api.set_parameter(2, 1, self._serial)     # Ручной режим
+            
             # ID=31 - setTemperature
             await self.api.set_parameter(31, int(temperature), self._serial)
+            await asyncio.sleep(2)
             await self.coordinator.async_refresh()
         except CannotConnect:
             _LOGGER.error("Cannot connect to set temperature")
@@ -117,6 +127,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
                 _LOGGER.error(f"Unsupported HVAC mode: {hvac_mode}")
                 return
             
+            await asyncio.sleep(2)
             await self.coordinator.async_refresh()
             
         except CannotConnect:
