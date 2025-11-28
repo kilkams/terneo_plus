@@ -1,7 +1,7 @@
 import logging, aiohttp, async_timeout
 from typing import Any, Dict
 
-from .const import API_ENDPOINT, CMD_TELEMETRY, CMD_PARAMS, CMD_SET_PARAM
+from .const import API_ENDPOINT, CMD_TELEMETRY, CMD_PARAMS, CMD_SET_PARAM, PARAM_TYPES
 
 _LOGGER = logging.getLogger(__name__)
 
