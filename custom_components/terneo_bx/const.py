@@ -7,6 +7,9 @@ CMD_SET_PARAM = 1
 CMD_SCHEDULE = 2
 PAR_TARGET_TEMP = 31
 LOGGER = None
+# Константы для энергетического сенсора
+ENERGY_UPDATE_INTERVAL_MAX = 3600  # Максимальный интервал обновления (1 час)
+ENERGY_MIN_INCREMENT = 0.001  # Минимальное значимое приращение энергии (кВт*ч)
 
 # Типы данных параметров (из документации Terneo)
 # 1 = int8
