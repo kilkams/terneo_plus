@@ -23,6 +23,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     api = TerneoApi(host, sn=serial)
 
+    # Если serial отсутствует - получаем его из телеметрии
+    if not serial:
+        _LOGGER.warning("Serial number not found in config, fetching from device...")
+        try:
+            telemetry = await api.get_telemetry()
+            serial = telemetry.get("sn")
+            if serial:
+                _LOGGER.info("Got serial number from device: %s", serial)
+                # Обновляем конфигурацию
+                hass.config_entries.async_update_entry(
+                    entry,
+                    data={**entry.data, "serial": serial}
+                )
+                # Обновляем API с полученным serial
+                api.sn = serial
+            else:
+                _LOGGER.error("Could not get serial number from device")
+        except Exception as e:
+            _LOGGER.error("Failed to fetch serial from device: %s", e)
+
     coordinator = TerneoCoordinator(
         hass=hass,
         api=api,
