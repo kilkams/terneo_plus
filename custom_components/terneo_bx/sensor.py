@@ -190,7 +190,7 @@ class TerneoEnergySensor(CoordinatorEntity, RestoreEntity, SensorEntity):
             
             # Защита от аномально больших интервалов (больше 1 часа)
             # Это предотвращает скачки при перезапуске HA
-            if time_delta_seconds > ENERGY_UPDATE_INTERVAL_MAX / 3600:
+            if time_delta_seconds > ENERGY_UPDATE_INTERVAL_MAX:
                 _LOGGER.debug(
                     f"Large time gap detected for {self._host}: {time_delta_seconds:.2f}h. "
                     f"Skipping energy calculation to prevent anomaly."
