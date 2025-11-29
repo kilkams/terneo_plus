@@ -36,6 +36,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # Счетчик энергии
     entities.append(TerneoEnergySensor(coordinator, host, serial))
 
+    # Диагностические сенсоры
+    entities.append(TerneoApiErrorSensor(coordinator, api, host, serial))
+    entities.append(TerneoApiResponseTimeSensor(coordinator, api, host, serial))
+
     async_add_entities(entities, update_before_add=True)
 
 
@@ -182,26 +186,30 @@ class TerneoEnergySensor(CoordinatorEntity, RestoreEntity, SensorEntity):
         # Вычисляем приращение энергии
         now = datetime.now()
         if self._last_update is not None:
-            time_delta_hours = (now - self._last_update).total_seconds() / 3600
+            time_delta_seconds = (now - self._last_update).total_seconds()
             
             # Защита от аномально больших интервалов (больше 1 часа)
             # Это предотвращает скачки при перезапуске HA
-            if time_delta_hours > ENERGY_UPDATE_INTERVAL_MAX / 3600:
+            if time_delta_seconds > ENERGY_UPDATE_INTERVAL_MAX / 3600:
                 _LOGGER.debug(
-                    f"Large time gap detected for {self._host}: {time_delta_hours:.2f}h. "
+                    f"Large time gap detected for {self._host}: {time_delta_seconds:.2f}h. "
                     f"Skipping energy calculation to prevent anomaly."
                 )
-            elif time_delta_hours > 0:  # ← ДОБАВЛЕНО: защита от отрицательных значений
+            elif time_delta_seconds > 0:  # ← ДОБАВЛЕНО: защита от отрицательных значений
                 # Используем среднюю мощность между двумя измерениями (метод трапеций)
                 avg_power = (self._last_power + current_power) / 2
-                energy_increment = (avg_power * time_delta_hours) / 1000  # Вт*ч → кВт*ч
-                self._total_energy += energy_increment
+                energy_increment_wh = (avg_power * time_delta_seconds) / 3600  # Вт*с → Вт*ч
+                energy_increment_kwh = energy_increment_wh / 1000  # Вт*ч → кВт*ч
+                self._total_energy += energy_increment_kwh
                 
-                if energy_increment > ENERGY_MIN_INCREMENT:  
+                if energy_increment_kwh > ENERGY_MIN_INCREMENT:  
                     _LOGGER.debug(
-                        f"Energy update for {self._host}: power={current_power}W, "
-                        f"time_delta={time_delta_hours:.4f}h, "
-                        f"increment={energy_increment:.6f}kWh, "
+                        f"Energy {self._host}: "
+                        f"Δt={time_delta_seconds:.1f}s, "
+                        f"P_last={self._last_power}W, "
+                        f"P_now={current_power}W, "
+                        f"P_avg={avg_power:.1f}W, "
+                        f"+{energy_increment_wh:.2f}Wh, "
                         f"total={self._total_energy:.3f}kWh"
                     )
         
@@ -222,3 +230,87 @@ class TerneoEnergySensor(CoordinatorEntity, RestoreEntity, SensorEntity):
             "current_power": current_power,
             "heating_active": relay_state == 1,
         }
+
+class TerneoApiErrorSensor(CoordinatorEntity, SensorEntity):
+    """Сенсор количества ошибок API."""
+    
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_icon = "mdi:alert-circle"
+
+    def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str, serial: str):
+        super().__init__(coordinator)
+        self.api = api
+        self._host = host
+        self._serial = serial
+        self._attr_name = f"Terneo {host} API Errors"
+        self._attr_unique_id = f"terneo_{serial}_api_errors"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._host)},
+            name=f"Terneo {self._host}",
+            manufacturer="Terneo",
+            model="Terneo BX"
+        )
+
+    @property
+    def native_value(self):
+        """Возвращает количество ошибок API."""
+        return self.api.error_count
+
+    @property
+    def extra_state_attributes(self):
+        """Дополнительные атрибуты."""
+        return {
+            "last_error": self.api.last_error,
+            "last_success": self.api.last_success.isoformat() if self.api.last_success else None,
+        }
+
+
+class TerneoApiResponseTimeSensor(CoordinatorEntity, SensorEntity):
+    """Сенсор времени ответа API."""
+    
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "ms"
+    _attr_icon = "mdi:timer-outline"
+
+    def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str, serial: str):
+        super().__init__(coordinator)
+        self.api = api
+        self._host = host
+        self._serial = serial
+        self._attr_name = f"Terneo {host} API Response Time"
+        self._attr_unique_id = f"terneo_{serial}_api_response_time"
+        self._last_response_time = None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._host)},
+            name=f"Terneo {self._host}",
+            manufacturer="Terneo",
+            model="Terneo BX"
+        )
+
+    @property
+    def native_value(self):
+        """Возвращает время ответа API в миллисекундах."""
+        return self._last_response_time
+
+    async def async_update(self):
+        """Измерить время ответа API."""
+        from datetime import datetime
+        
+        try:
+            start_time = datetime.now()
+            await self.api.get_telemetry()
+            end_time = datetime.now()
+            
+            response_time_ms = (end_time - start_time).total_seconds() * 1000
+            self._last_response_time = round(response_time_ms, 2)
+            
+        except Exception as e:
+            _LOGGER.debug(f"Error measuring API response time: {e}")
+            self._last_response_time = None    
