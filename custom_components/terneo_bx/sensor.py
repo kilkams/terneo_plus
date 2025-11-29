@@ -36,6 +36,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # Счетчик энергии
     entities.append(TerneoEnergySensor(coordinator, host, serial))
 
+    # Диагностические сенсоры
+    entities.append(TerneoApiErrorSensor(coordinator, api, host, serial))
+    entities.append(TerneoApiResponseTimeSensor(coordinator, api, host, serial))
+
     async_add_entities(entities, update_before_add=True)
 
 
@@ -222,3 +226,87 @@ class TerneoEnergySensor(CoordinatorEntity, RestoreEntity, SensorEntity):
             "current_power": current_power,
             "heating_active": relay_state == 1,
         }
+
+class TerneoApiErrorSensor(CoordinatorEntity, SensorEntity):
+    """Сенсор количества ошибок API."""
+    
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_icon = "mdi:alert-circle"
+
+    def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str, serial: str):
+        super().__init__(coordinator)
+        self.api = api
+        self._host = host
+        self._serial = serial
+        self._attr_name = f"Terneo {host} API Errors"
+        self._attr_unique_id = f"terneo_{serial}_api_errors"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._host)},
+            name=f"Terneo {self._host}",
+            manufacturer="Terneo",
+            model="Terneo BX"
+        )
+
+    @property
+    def native_value(self):
+        """Возвращает количество ошибок API."""
+        return self.api.error_count
+
+    @property
+    def extra_state_attributes(self):
+        """Дополнительные атрибуты."""
+        return {
+            "last_error": self.api.last_error,
+            "last_success": self.api.last_success.isoformat() if self.api.last_success else None,
+        }
+
+
+class TerneoApiResponseTimeSensor(CoordinatorEntity, SensorEntity):
+    """Сенсор времени ответа API."""
+    
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "ms"
+    _attr_icon = "mdi:timer-outline"
+
+    def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str, serial: str):
+        super().__init__(coordinator)
+        self.api = api
+        self._host = host
+        self._serial = serial
+        self._attr_name = f"Terneo {host} API Response Time"
+        self._attr_unique_id = f"terneo_{serial}_api_response_time"
+        self._last_response_time = None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._host)},
+            name=f"Terneo {self._host}",
+            manufacturer="Terneo",
+            model="Terneo BX"
+        )
+
+    @property
+    def native_value(self):
+        """Возвращает время ответа API в миллисекундах."""
+        return self._last_response_time
+
+    async def async_update(self):
+        """Измерить время ответа API."""
+        from datetime import datetime
+        
+        try:
+            start_time = datetime.now()
+            await self.api.get_telemetry()
+            end_time = datetime.now()
+            
+            response_time_ms = (end_time - start_time).total_seconds() * 1000
+            self._last_response_time = round(response_time_ms, 2)
+            
+        except Exception as e:
+            _LOGGER.debug(f"Error measuring API response time: {e}")
+            self._last_response_time = None    

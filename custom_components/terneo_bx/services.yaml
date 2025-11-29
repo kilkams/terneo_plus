@@ -11,6 +11,20 @@ reset_energy:
           domain: sensor
           device_class: energy
 
+reset_api_errors:
+  name: Reset API Error Counter
+  description: Reset the API error counter to zero
+  fields:
+    entity_id:
+      name: Entity
+      description: Any entity from the Terneo device
+      required: true
+      selector:
+        entity:
+          domain:
+            - climate
+            - sensor
+
 blink:
   name: Blink Device
   description: Make the device display blink (for identification)

@@ -1,6 +1,6 @@
-import logging, aiohttp, async_timeout
+import logging, aiohttp, async_timeout, asyncio
 from typing import Any, Dict
-
+from datetime import datetime
 from .const import API_ENDPOINT, CMD_TELEMETRY, CMD_PARAMS, CMD_SET_PARAM, PARAM_TYPES
 
 _LOGGER = logging.getLogger(__name__)
@@ -12,7 +12,10 @@ class TerneoApi:
     def __init__(self, host: str, sn: str | None = None):
         self.host = host.rstrip("/")
         self.sn = sn
-
+        self.error_count = 0  
+        self.last_error = None  
+        self.last_success = None  
+        _LOGGER.info("TerneoApi initialized with host=%s, sn=%s", host, sn)
     async def _post(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         url = f"http://{self.host}{API_ENDPOINT}"
         _LOGGER.debug("POST %s -> %s", url, payload)
@@ -22,14 +25,32 @@ class TerneoApi:
                     async with session.post(url, json=payload) as resp:
                         raw = await resp.text()
                         if resp.status != 200:
+                            self.error_count += 1  
+                            self.last_error = f"HTTP {resp.status}"                           
                             raise CannotConnect(f"HTTP {resp.status}: {raw}")
                         try:
-                            return await resp.json()
+                            data = await resp.json()
+                            self.last_success = datetime.now()                                                        
+                            return data
                         except Exception as e:
+                            self.error_count += 1  
+                            self.last_error = f"Invalid JSON: {e}"                             
                             _LOGGER.debug("Invalid JSON response: %s", raw)
                             raise CannotConnect(f"Invalid JSON: {e}")
+        except asyncio.TimeoutError:
+            self.error_count += 1 
+            self.last_error = "Timeout"  
+            raise CannotConnect("Request timeout")                        
         except Exception as e:
+            self.error_count += 1 
+            self.last_error = str(e)            
             raise CannotConnect(f"API request failed: {e}")
+
+    def reset_error_count(self):
+        """Сброс счетчика ошибок."""
+        self.error_count = 0
+        self.last_error = None
+        _LOGGER.info(f"Error counter reset for {self.host}")
 
     # READ
     async def get_params(self) -> Dict[str, Any] | None:

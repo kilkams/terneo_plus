@@ -191,6 +191,32 @@ async def _register_services(hass: HomeAssistant):
         hass.services.async_register(DOMAIN, "restart", restart_device)
         _LOGGER.info("Registered restart service")
 
+    if not hass.services.has_service(DOMAIN, "reset_api_errors"):
+        async def reset_api_errors(call):
+            """Сброс счетчика ошибок API."""
+            entity_id = call.data.get("entity_id")
+            
+            if not entity_id:
+                _LOGGER.error("entity_id is required for reset_api_errors service")
+                return
+            
+            host = await _find_device_by_entity(entity_id)
+            if not host:
+                return
+            
+            # Находим API объект
+            for entry_id, entry_data in hass.data[DOMAIN].items():
+                coordinator = entry_data.get("coordinator")
+                if coordinator and coordinator.host == host:
+                    api = entry_data.get("api")
+                    if api:
+                        api.reset_error_count()
+                        _LOGGER.info(f"API error counter reset for {host}")
+                    break
+        
+        hass.services.async_register(DOMAIN, "reset_api_errors", reset_api_errors)
+        _LOGGER.info("Registered reset_api_errors service")    
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload entry."""
