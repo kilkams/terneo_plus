@@ -97,7 +97,7 @@ class TerneoChildLockSwitch(TerneoBaseSwitch):
     """Child lock switch."""
 
     def __init__(self, coordinator, api, host, serial):
-        super().__init__(coordinator, api, host, serial, param_id=124, name="Child Lock", translation_key="night_brightness", icon="mdi:lock")
+        super().__init__(coordinator, api, host, serial, param_id=124, translation_key="child_lock", icon="mdi:lock")
 class TerneoNightBrightnessSwitch(TerneoBaseSwitch):
     """Night brightness mode switch."""
 
