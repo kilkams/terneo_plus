@@ -30,14 +30,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class TerneoBaseSwitch(CoordinatorEntity, SwitchEntity):
     """Base class for Terneo switches."""
-
-    def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str, serial: str, param_id: int, name: str, icon: str):
+    _attr_has_entity_name = True
+    def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str, serial: str, param_id: int, translation_key: str, icon: str):
         super().__init__(coordinator)
         self.api = api
         self._host = host
         self._serial = serial
         self._param_id = param_id
-        self._attr_name = f"Terneo {host} {name}"
+        self._attr_translation_key = translation_key
         self._attr_unique_id = f"terneo_{serial}_{name.lower().replace(' ', '_')}"
         self._attr_icon = icon
 
@@ -97,10 +97,7 @@ class TerneoChildLockSwitch(TerneoBaseSwitch):
     """Child lock switch."""
 
     def __init__(self, coordinator, api, host, serial):
-        super().__init__(coordinator, api, host, serial, param_id=124, name="Child Lock", icon="mdi:lock")
-        self._attr_has_entity_name = True
-        self._attr_translation_key = "child_lock"
-
+        super().__init__(coordinator, api, host, serial, param_id=124, name="Child Lock", translation_key="night_brightness", icon="mdi:lock")
 class TerneoNightBrightnessSwitch(TerneoBaseSwitch):
     """Night brightness mode switch."""
 
@@ -111,12 +108,9 @@ class TerneoNightBrightnessSwitch(TerneoBaseSwitch):
             host,
             serial,
             param_id=120,
-            name="Night Brightness",
+            translation_key="night_brightness",
             icon="mdi:brightness-4"
         )
-        self._attr_has_entity_name = True
-        self._attr_translation_key = "night_brightness"
-
 class TerneoPreheatSwitch(TerneoBaseSwitch):
     """Preheat control switch."""
 
@@ -127,11 +121,9 @@ class TerneoPreheatSwitch(TerneoBaseSwitch):
             host,
             serial,
             param_id=121,
-            name="Preheat",
+            translation_key="preheat",
             icon="mdi:fire"
         )
-        self._attr_has_entity_name = True
-        self._attr_translation_key = "preheat"
 
 class TerneoWindowControlSwitch(TerneoBaseSwitch):
     """Window open control switch."""
@@ -143,8 +135,6 @@ class TerneoWindowControlSwitch(TerneoBaseSwitch):
             host,
             serial,
             param_id=122,
-            name="Window Control",
+            translation_key="window_control",
             icon="mdi:window-open"
-        )
-        self._attr_has_entity_name = True
-        self._attr_translation_key = "window_control"        
+        )       
