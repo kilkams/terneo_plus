@@ -12,10 +12,10 @@ from .coordinator import TerneoCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 SENSOR_DEFS = [
-    ('temp_air', 'Air Temperature', SensorDeviceClass.TEMPERATURE, '°C', SensorStateClass.MEASUREMENT),
-    ('temp_floor', 'Floor Temperature', SensorDeviceClass.TEMPERATURE, '°C', SensorStateClass.MEASUREMENT),
-    ('target_temp', 'Target Temperature', SensorDeviceClass.TEMPERATURE, '°C', SensorStateClass.MEASUREMENT),
-    ('wifi_rssi', 'WiFi RSSI', SensorDeviceClass.SIGNAL_STRENGTH, 'dBm', SensorStateClass.MEASUREMENT),
+    ('temp_air', None, SensorDeviceClass.TEMPERATURE, '°C', SensorStateClass.MEASUREMENT),
+    ('temp_floor', None, SensorDeviceClass.TEMPERATURE, '°C', SensorStateClass.MEASUREMENT),
+    ('target_temp', None, SensorDeviceClass.TEMPERATURE, '°C', SensorStateClass.MEASUREMENT),
+    ('wifi_rssi', None, SensorDeviceClass.SIGNAL_STRENGTH, 'dBm', SensorStateClass.MEASUREMENT),
 ]
 
 
@@ -51,7 +51,9 @@ class TerneoCoordinatorSensor(CoordinatorEntity, SensorEntity):
         self._host = host
         self._serial = serial
         self._key = key
-        self._attr_name = f"Terneo {host} {title}"
+        self._attr_has_entity_name = True
+        self._attr_translation_key = key 
+        # self._attr_name = f"Terneo {host} {title}"
         self._attr_unique_id = f"terneo_{serial}_{key}"
         self._attr_device_class = dev_class
         self._attr_native_unit_of_measurement = unit
