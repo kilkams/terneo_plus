@@ -186,26 +186,30 @@ class TerneoEnergySensor(CoordinatorEntity, RestoreEntity, SensorEntity):
         # Вычисляем приращение энергии
         now = datetime.now()
         if self._last_update is not None:
-            time_delta_hours = (now - self._last_update).total_seconds() / 3600
+            time_delta_seconds = (now - self._last_update).total_seconds()
             
             # Защита от аномально больших интервалов (больше 1 часа)
             # Это предотвращает скачки при перезапуске HA
-            if time_delta_hours > ENERGY_UPDATE_INTERVAL_MAX / 3600:
+            if time_delta_seconds > ENERGY_UPDATE_INTERVAL_MAX / 3600:
                 _LOGGER.debug(
-                    f"Large time gap detected for {self._host}: {time_delta_hours:.2f}h. "
+                    f"Large time gap detected for {self._host}: {time_delta_seconds:.2f}h. "
                     f"Skipping energy calculation to prevent anomaly."
                 )
-            elif time_delta_hours > 0:  # ← ДОБАВЛЕНО: защита от отрицательных значений
+            elif time_delta_seconds > 0:  # ← ДОБАВЛЕНО: защита от отрицательных значений
                 # Используем среднюю мощность между двумя измерениями (метод трапеций)
                 avg_power = (self._last_power + current_power) / 2
-                energy_increment = (avg_power * time_delta_hours) / 1000  # Вт*ч → кВт*ч
-                self._total_energy += energy_increment
+                energy_increment_wh = (avg_power * time_delta_seconds) / 3600  # Вт*с → Вт*ч
+                energy_increment_kwh = energy_increment_wh / 1000  # Вт*ч → кВт*ч
+                self._total_energy += energy_increment_kwh
                 
-                if energy_increment > ENERGY_MIN_INCREMENT:  
+                if energy_increment_kwh > ENERGY_MIN_INCREMENT:  
                     _LOGGER.debug(
-                        f"Energy update for {self._host}: power={current_power}W, "
-                        f"time_delta={time_delta_hours:.4f}h, "
-                        f"increment={energy_increment:.6f}kWh, "
+                        f"Energy {self._host}: "
+                        f"Δt={time_delta_seconds:.1f}s, "
+                        f"P_last={self._last_power}W, "
+                        f"P_now={current_power}W, "
+                        f"P_avg={avg_power:.1f}W, "
+                        f"+{energy_increment_wh:.2f}Wh, "
                         f"total={self._total_energy:.3f}kWh"
                     )
         
