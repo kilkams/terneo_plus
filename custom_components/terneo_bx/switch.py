@@ -38,7 +38,7 @@ class TerneoBaseSwitch(CoordinatorEntity, SwitchEntity):
         self._serial = serial
         self._param_id = param_id
         self._attr_translation_key = translation_key
-        self._attr_unique_id = f"terneo_{serial}_{name.lower().replace(' ', '_')}"
+        self._attr_unique_id = f"terneo_{serial}_{translation_key}"
         self._attr_icon = icon
 
     @property
