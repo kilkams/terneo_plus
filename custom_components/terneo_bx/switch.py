@@ -97,16 +97,9 @@ class TerneoChildLockSwitch(TerneoBaseSwitch):
     """Child lock switch."""
 
     def __init__(self, coordinator, api, host, serial):
-        super().__init__(
-            coordinator,
-            api,
-            host,
-            serial,
-            param_id=124,
-            name="Child Lock",
-            icon="mdi:lock"
-        )
-
+        super().__init__(coordinator, api, host, serial, param_id=124, name="Child Lock", icon="mdi:lock")
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "child_lock"
 
 class TerneoNightBrightnessSwitch(TerneoBaseSwitch):
     """Night brightness mode switch."""
@@ -121,7 +114,8 @@ class TerneoNightBrightnessSwitch(TerneoBaseSwitch):
             name="Night Brightness",
             icon="mdi:brightness-4"
         )
-
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "night_brightness"
 
 class TerneoPreheatSwitch(TerneoBaseSwitch):
     """Preheat control switch."""
@@ -136,7 +130,8 @@ class TerneoPreheatSwitch(TerneoBaseSwitch):
             name="Preheat",
             icon="mdi:fire"
         )
-
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "preheat"
 
 class TerneoWindowControlSwitch(TerneoBaseSwitch):
     """Window open control switch."""
@@ -151,3 +146,5 @@ class TerneoWindowControlSwitch(TerneoBaseSwitch):
             name="Window Control",
             icon="mdi:window-open"
         )
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "window_control"        

@@ -53,7 +53,6 @@ class TerneoCoordinatorSensor(CoordinatorEntity, SensorEntity):
         self._key = key
         self._attr_has_entity_name = True
         self._attr_translation_key = key 
-        # self._attr_name = f"Terneo {host} {title}"
         self._attr_unique_id = f"terneo_{serial}_{key}"
         self._attr_device_class = dev_class
         self._attr_native_unit_of_measurement = unit
@@ -84,7 +83,8 @@ class TerneoPowerSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._host = host
         self._serial = serial
-        self._attr_name = f"Terneo {host} Power"
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "power"
         self._attr_unique_id = f"terneo_{serial}_power_w"
 
     @property
@@ -131,7 +131,8 @@ class TerneoEnergySensor(CoordinatorEntity, RestoreEntity, SensorEntity):
         super().__init__(coordinator)
         self._host = host
         self._serial = serial
-        self._attr_name = f"Terneo {host} Energy"
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "energy"
         self._attr_unique_id = f"terneo_{serial}_energy_kwh"
         self._total_energy = 0.0
         self._last_update = None
@@ -244,7 +245,8 @@ class TerneoApiErrorSensor(CoordinatorEntity, SensorEntity):
         self.api = api
         self._host = host
         self._serial = serial
-        self._attr_name = f"Terneo {host} API Errors"
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "api_errors"
         self._attr_unique_id = f"terneo_{serial}_api_errors"
 
     @property
@@ -283,7 +285,8 @@ class TerneoApiResponseTimeSensor(CoordinatorEntity, SensorEntity):
         self.api = api
         self._host = host
         self._serial = serial
-        self._attr_name = f"Terneo {host} API Response Time"
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "api_response_time"
         self._attr_unique_id = f"terneo_{serial}_api_response_time"
         self._last_response_time = None
 
