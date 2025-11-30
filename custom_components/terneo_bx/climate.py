@@ -44,8 +44,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE |
         ClimateEntityFeature.TURN_ON |
-        ClimateEntityFeature.TURN_OFF |
-        ClimateEntityFeature.PRESET_MODE
+        ClimateEntityFeature.TURN_OFF
     )
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.AUTO, HVACMode.HEAT]
 
