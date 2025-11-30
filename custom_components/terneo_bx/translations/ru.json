@@ -1,70 +1,141 @@
 {
-  "title": "Terneo BX",
   "config": {
     "step": {
       "user": {
         "title": "Настройка Terneo BX",
-        "description": "Введите IP-адрес термостата Terneo.",
+        "description": "Настройте ваш термостат Terneo BX",
         "data": {
-          "host": "IP-адрес устройства"
+          "mode": "Режим настройки",
+          "host": "IP адрес",
+          "scan_interval": "Интервал опроса (секунды)"
+        }
+      },
+      "discover_broadcast": {
+        "title": "Автоматическое обнаружение",
+        "description": "Автоматически найти устройства Terneo в сети",
+        "data": {
+          "port": "UDP порт",
+          "timeout": "Таймаут (секунды)",
+          "scan_interval": "Интервал опроса (секунды)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Не удалось подключиться к устройству.",
-      "invalid_response": "Некорректный ответ от устройства.",
-      "unknown": "Неизвестная ошибка."
+      "cannot_connect": "Не удалось подключиться к устройству",
+      "host_required": "Требуется IP адрес",
+      "not_found": "Устройства не найдены",
+      "unknown": "Произошла непредвиденная ошибка"
     },
     "abort": {
-      "already_configured": "Это устройство уже добавлено."
+      "already_configured": "Устройство уже настроено"
     }
   },
   "options": {
     "step": {
-      "user": {
-        "title": "Параметры Terneo BX",
-        "description": "Настройте дополнительные параметры интеграции.",
+      "init": {
+        "title": "Настройки Terneo BX",
         "data": {
-          "update_interval": "Интервал обновления (сек.)",
-          "enable_calendar": "Включить календарь расписания",
-          "debug_logs": "Включить расширенный лог"
+          "scan_interval": "Интервал опроса (секунды)"
         }
       }
     }
   },
   "entity": {
-    "climate": {
-      "terneo": {
-        "name": "Термостат",
-        "state": {
-          "heat": "Обогрев",
-          "off": "Выключено"
-        }
-      }
-    },
     "sensor": {
-      "temperature": {
-        "name": "Температура пола"
-      },
-      "air_temperature": {
+      "temp_air": {
         "name": "Температура воздуха"
       },
+      "temp_floor": {
+        "name": "Температура пола"
+      },
+      "target_temp": {
+        "name": "Целевая температура"
+      },
+      "wifi_rssi": {
+        "name": "Уровень WiFi сигнала"
+      },
       "power": {
-        "name": "Потребляемая мощность"
+        "name": "Мощность"
+      },
+      "energy": {
+        "name": "Энергия"
+      },
+      "api_errors": {
+        "name": "Ошибки API"
+      },
+      "api_response_time": {
+        "name": "Время ответа API"
       }
     },
     "binary_sensor": {
-      "relay": {
-        "name": "Состояние реле",
-        "state": {
-          "on": "Включено",
-          "off": "Выключено"
-        }
+      "heating_active": {
+        "name": "Нагрев активен"
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "Блокировка от детей"
+      },
+      "night_brightness": {
+        "name": "Ночная яркость"
+      },
+      "preheat": {
+        "name": "Предварительный нагрев"
+      },
+      "window_control": {
+        "name": "Режим открытого окна"
+      }
+    },
+    "climate": {
+      "terneo": {
+        "name": "Terneo"
       }
     },
     "calendar": {
       "schedule": {
         "name": "Расписание"
+      }
+    }
+  },
+  "services": {
+    "reset_energy": {
+      "name": "Сбросить счетчик энергии",
+      "description": "Сбросить счетчик потребления энергии на ноль",
+      "fields": {
+        "entity_id": {
+          "name": "Сущность",
+          "description": "Сенсор энергии для сброса"
+        }
+      }
+    },
+    "reset_api_errors": {
+      "name": "Сбросить счетчик ошибок API",
+      "description": "Сбросить счетчик ошибок API на ноль",
+      "fields": {
+        "entity_id": {
+          "name": "Сущность",
+          "description": "Любая сущность устройства Terneo"
+        }
+      }
+    },
+    "blink": {
+      "name": "Мигнуть дисплеем",
+      "description": "Заставить дисплей устройства мигнуть для идентификации",
+      "fields": {
+        "entity_id": {
+          "name": "Сущность",
+          "description": "Любая сущность устройства Terneo"
+        }
+      }
+    },
+    "restart": {
+      "name": "Перезагрузить устройство",
+      "description": "Перезагрузить устройство Terneo (ИСПОЛЬЗУЙТЕ ОСТОРОЖНО!)",
+      "fields": {
+        "entity_id": {
+          "name": "Сущность",
+          "description": "Любая сущность устройства Terneo"
+        }
       }
     }
   }

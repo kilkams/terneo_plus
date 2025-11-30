@@ -1,70 +1,141 @@
 {
-  "title": "Terneo BX",
   "config": {
     "step": {
       "user": {
         "title": "Налаштування Terneo BX",
-        "description": "Введіть IP-адресу термостата Terneo.",
+        "description": "Налаштуйте ваш термостат Terneo BX",
         "data": {
-          "host": "IP-адреса пристрою"
+          "mode": "Режим налаштування",
+          "host": "IP адреса",
+          "scan_interval": "Інтервал опитування (секунди)"
+        }
+      },
+      "discover_broadcast": {
+        "title": "Автоматичне виявлення",
+        "description": "Автоматично знайти пристрої Terneo в мережі",
+        "data": {
+          "port": "UDP порт",
+          "timeout": "Тайм-аут (секунди)",
+          "scan_interval": "Інтервал опитування (секунди)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Не вдалося підключитися до пристрою.",
-      "invalid_response": "Неправильна відповідь від пристрою.",
-      "unknown": "Невідома помилка."
+      "cannot_connect": "Не вдалося підключитися до пристрою",
+      "host_required": "Потрібна IP адреса",
+      "not_found": "Пристрої не знайдено",
+      "unknown": "Сталася непередбачена помилка"
     },
     "abort": {
-      "already_configured": "Цей пристрій уже додано."
+      "already_configured": "Пристрій вже налаштовано"
     }
   },
   "options": {
     "step": {
-      "user": {
-        "title": "Параметри Terneo BX",
-        "description": "Налаштуйте додаткові параметри інтеграції.",
+      "init": {
+        "title": "Налаштування Terneo BX",
         "data": {
-          "update_interval": "Інтервал оновлення (сек.)",
-          "enable_calendar": "Увімкнути календар розкладу",
-          "debug_logs": "Увімкнути розширений лог"
+          "scan_interval": "Інтервал опитування (секунди)"
         }
       }
     }
   },
   "entity": {
-    "climate": {
-      "terneo": {
-        "name": "Термостат",
-        "state": {
-          "heat": "Обігрів",
-          "off": "Вимкнено"
-        }
-      }
-    },
     "sensor": {
-      "temperature": {
-        "name": "Температура підлоги"
-      },
-      "air_temperature": {
+      "temp_air": {
         "name": "Температура повітря"
       },
+      "temp_floor": {
+        "name": "Температура підлоги"
+      },
+      "target_temp": {
+        "name": "Цільова температура"
+      },
+      "wifi_rssi": {
+        "name": "Рівень WiFi сигналу"
+      },
       "power": {
-        "name": "Споживана потужність"
+        "name": "Потужність"
+      },
+      "energy": {
+        "name": "Енергія"
+      },
+      "api_errors": {
+        "name": "Помилки API"
+      },
+      "api_response_time": {
+        "name": "Час відповіді API"
       }
     },
     "binary_sensor": {
-      "relay": {
-        "name": "Стан реле",
-        "state": {
-          "on": "Увімкнено",
-          "off": "Вимкнено"
-        }
+      "heating_active": {
+        "name": "Нагрів активний"
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "Блокування від дітей"
+      },
+      "night_brightness": {
+        "name": "Нічна яскравість"
+      },
+      "preheat": {
+        "name": "Попередній нагрів"
+      },
+      "window_control": {
+        "name": "Контроль вікна"
+      }
+    },
+    "climate": {
+      "terneo": {
+        "name": "Terneo"
       }
     },
     "calendar": {
       "schedule": {
         "name": "Розклад"
+      }
+    }
+  },
+  "services": {
+    "reset_energy": {
+      "name": "Скинути лічильник енергії",
+      "description": "Скинути лічильник споживання енергії на нуль",
+      "fields": {
+        "entity_id": {
+          "name": "Сутність",
+          "description": "Сенсор енергії для скидання"
+        }
+      }
+    },
+    "reset_api_errors": {
+      "name": "Скинути лічильник помилок API",
+      "description": "Скинути лічильник помилок API на нуль",
+      "fields": {
+        "entity_id": {
+          "name": "Сутність",
+          "description": "Будь-яка сутність пристрою Terneo"
+        }
+      }
+    },
+    "blink": {
+      "name": "Блимнути дисплеєм",
+      "description": "Змусити дисплей пристрою блимнути для ідентифікації",
+      "fields": {
+        "entity_id": {
+          "name": "Сутність",
+          "description": "Будь-яка сутність пристрою Terneo"
+        }
+      }
+    },
+    "restart": {
+      "name": "Перезавантажити пристрій",
+      "description": "Перезавантажити пристрій Terneo (ВИКОРИСТОВУЙТЕ ОБЕРЕЖНО!)",
+      "fields": {
+        "entity_id": {
+          "name": "Сутність",
+          "description": "Будь-яка сутність пристрою Terneo"
+        }
       }
     }
   }
