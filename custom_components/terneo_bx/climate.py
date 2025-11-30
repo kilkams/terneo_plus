@@ -41,7 +41,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class TerneoClimate(CoordinatorEntity, ClimateEntity):
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
+    _attr_supported_features = (
+        ClimateEntityFeature.TARGET_TEMPERATURE |
+        ClimateEntityFeature.TURN_ON |
+        ClimateEntityFeature.TURN_OFF |
+        ClimateEntityFeature.PRESET_MODE
+    )
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.AUTO, HVACMode.HEAT]
 
     def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi):
