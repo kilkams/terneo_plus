@@ -23,8 +23,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
         TerneoChildLockSwitch(coordinator, api, host, serial),
         TerneoNightBrightnessSwitch(coordinator, api, host, serial),
         TerneoPreheatSwitch(coordinator, api, host, serial),
-        TerneoWindowControlSwitch(coordinator, api, host, serial),
     ]
+
+    params = coordinator.data.get("params_dict", {})
+    if 122 in params:
+        switches.append(
+            TerneoWindowControlSwitch(coordinator, api, host, serial)
+        )
+    else:
+        _LOGGER.info(
+            f"Terneo {host}: parameter 122 not supported — window control disabled"
+        )
 
     async_add_entities(switches, update_before_add=True)
 
