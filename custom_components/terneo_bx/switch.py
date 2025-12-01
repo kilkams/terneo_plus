@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import asyncio
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
@@ -31,6 +32,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class TerneoBaseSwitch(CoordinatorEntity, SwitchEntity):
     """Base class for Terneo switches."""
     _attr_has_entity_name = True
+    
     def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str, serial: str, param_id: int, translation_key: str, icon: str):
         super().__init__(coordinator)
         self.api = api
@@ -44,7 +46,7 @@ class TerneoBaseSwitch(CoordinatorEntity, SwitchEntity):
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={(DOMAIN, self._host)},
+            identifiers={(DOMAIN, self._host)}, 
             name=f"Terneo {self._host}",
             manufacturer="Terneo",
             model="Terneo BX"
@@ -67,37 +69,47 @@ class TerneoBaseSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):
         """Turn the switch on."""
         try:
+            _LOGGER.debug(f"Turning on switch: param_id={self._param_id}, translation_key={self._attr_translation_key}")
             await self.api.set_parameter(self._param_id, 1, self._serial)
             
-            import asyncio
             await asyncio.sleep(1)
             await self.coordinator.async_refresh()
             
-        except CannotConnect:
-            _LOGGER.error("Cannot connect to turn on %s", self._attr_name)
+        except CannotConnect as e:
+            _LOGGER.error(f"Cannot connect to turn on switch (param_id={self._param_id}): {e}")
         except Exception as e:
-            _LOGGER.error("Error turning on %s: %s", self._attr_name, e)
+            _LOGGER.error(f"Error turning on switch (param_id={self._param_id}): {e}", exc_info=True)
 
     async def async_turn_off(self, **kwargs):
         """Turn the switch off."""
         try:
+            _LOGGER.debug(f"Turning off switch: param_id={self._param_id}, translation_key={self._attr_translation_key}")
             await self.api.set_parameter(self._param_id, 0, self._serial)
             
-            import asyncio
             await asyncio.sleep(1)
             await self.coordinator.async_refresh()
             
-        except CannotConnect:
-            _LOGGER.error("Cannot connect to turn off %s", self._attr_name)
+        except CannotConnect as e:
+            _LOGGER.error(f"Cannot connect to turn off switch (param_id={self._param_id}): {e}")
         except Exception as e:
-            _LOGGER.error("Error turning off %s: %s", self._attr_name, e)
+            _LOGGER.error(f"Error turning off switch (param_id={self._param_id}): {e}", exc_info=True)
 
 
 class TerneoChildLockSwitch(TerneoBaseSwitch):
     """Child lock switch."""
 
     def __init__(self, coordinator, api, host, serial):
-        super().__init__(coordinator, api, host, serial, param_id=124, translation_key="child_lock", icon="mdi:lock")
+        super().__init__(
+            coordinator, 
+            api, 
+            host, 
+            serial, 
+            param_id=124, 
+            translation_key="child_lock", 
+            icon="mdi:lock"
+        )
+
+
 class TerneoNightBrightnessSwitch(TerneoBaseSwitch):
     """Night brightness mode switch."""
 
@@ -111,6 +123,8 @@ class TerneoNightBrightnessSwitch(TerneoBaseSwitch):
             translation_key="night_brightness",
             icon="mdi:brightness-4"
         )
+
+
 class TerneoPreheatSwitch(TerneoBaseSwitch):
     """Preheat control switch."""
 
@@ -125,6 +139,7 @@ class TerneoPreheatSwitch(TerneoBaseSwitch):
             icon="mdi:fire"
         )
 
+
 class TerneoWindowControlSwitch(TerneoBaseSwitch):
     """Window open control switch."""
 
@@ -137,4 +152,4 @@ class TerneoWindowControlSwitch(TerneoBaseSwitch):
             param_id=122,
             translation_key="window_control",
             icon="mdi:window-open"
-        )       
+        )
