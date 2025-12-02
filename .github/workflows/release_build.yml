@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - "v*"
-
+      
 permissions:
   contents: write
 
@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
  
     steps:
-      # --- Clone repo ---
+      # --- Checkout repo ---
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -25,28 +25,36 @@ jobs:
         run: |
           echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      # --- Automatic changelog ---
+      # --- Generate changelog ---
       - name: Generate changelog
         id: changelog
         uses: metcalfc/changelog-generator@v4
         with:
           myToken: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- Bump version in manifest.json ---
+      # --- Update manifest.json ---
       - name: Update manifest.json
         run: |
           jq '.version = "${{ steps.version.outputs.version }}"' custom_components/terneo_bx/manifest.json > tmp.json
           mv tmp.json custom_components/terneo_bx/manifest.json
 
-      # --- Create ZIP (correct final name!) ---
+      # --- Commit updated manifest.json ---
+      - name: Commit version bump
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add custom_components/terneo_bx/manifest.json
+          git commit -m "Bump version to v${{ steps.version.outputs.version }}" || echo "No changes"
+          git push
+
+      # --- Create ZIP ---
       - name: Create ZIP archive
         run: |
-          mkdir -p ./zip/custom_components
-          cp -R ./custom_components/terneo_bx ./zip/custom_components/terneo_bx
-          cd zip
-          zip -r terneo_bx.zip custom_components
+          cd custom_components
+          zip -r ../terneo_bx.zip terneo_bx
+          cd ..
  
-      # --- Attach assets ---
+      # --- Create Release ---
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -55,7 +63,7 @@ jobs:
           body: ${{ steps.changelog.outputs.changelog }}
           files: |
             terneo_bx.zip
-            brand/icon.png
-            brand/logo.png
+            brands/icon.png
+            brands/logo.png
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
