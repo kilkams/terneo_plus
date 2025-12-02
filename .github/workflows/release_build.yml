@@ -1,35 +1,57 @@
-name: Build & Upload HACS ZIP
+name: Build & Release HACS Package
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Забираем репозиторий
-      - name: Checkout repository
+      # --- Clone repo ---
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # 2. Чистим имя репозитория для названия ZIP
-      - name: Prepare ZIP filename
-        id: vars
+      # --- Extract version from tag ---
+      - name: Get version
+        id: version
         run: |
-          REPO_NAME=${GITHUB_REPOSITORY#*/}
-          echo "repo=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      # 3. Создаём ZIP для HACS
+      # --- Automatic changelog ---
+      - name: Generate changelog
+        id: changelog
+        uses: metcalfc/changelog-generator@v4
+        with:
+          myToken: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- Bump version in manifest.json ---
+      - name: Update manifest.json
+        run: |
+          jq '.version = "${{ steps.version.outputs.version }}"' custom_components/terneo_bx/manifest.json > tmp.json
+          mv tmp.json custom_components/terneo_bx/manifest.json
+
+      # --- Create ZIP (correct final name!) ---
       - name: Create ZIP archive
         run: |
-          mkdir -p dist
-          zip -r "dist/${{ steps.vars.outputs.repo }}.zip" custom_components/
+          cd custom_components
+          zip -r ../terneo_bx.zip terneo_bx
+          cd ..
 
-      # 4. Загружаем ZIP в релиз
-      - name: Upload ZIP to release
+      # --- Attach assets ---
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.zip
+          tag_name: ${{ github.ref }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: |
+            terneo_bx.zip
+            brand/icon.png
+            brand/logo.png
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
