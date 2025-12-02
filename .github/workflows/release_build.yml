@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main  # ← ДОБАВЛЕНО: переключаемся на main ветку
+          ref: main
 
       # --- Extract version from tag ---
       - name: Get version
@@ -49,15 +49,13 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Bump version to v${{ steps.version.outputs.version }}"
-            git push origin main  # ← ИСПРАВЛЕНО: явно указываем ветку
+            git push origin main
           fi
 
-      # --- Create ZIP archive ---
+      # --- Create ZIP archive with custom_components folder ---
       - name: Create ZIP archive
         run: |
-          cd custom_components
-          zip -r ../terneo_bx.zip terneo_bx
-          cd ..
+          zip -r terneo_bx.zip custom_components/
 
       # --- Publish Release & attach assets ---
       - name: Create Release
@@ -66,7 +64,6 @@ jobs:
           tag_name: ${{ github.ref }}
           name: Release ${{ steps.version.outputs.version }}
           body: ${{ steps.changelog.outputs.changelog }}
-          files: |
-            terneo_bx.zip
+          files: terneo_bx.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
