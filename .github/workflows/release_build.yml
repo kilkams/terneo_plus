@@ -11,13 +11,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       # --- Clone repo ---
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main  # ← ДОБАВЛЕНО: переключаемся на main ветку
 
       # --- Extract version from tag ---
       - name: Get version
@@ -32,13 +32,6 @@ jobs:
         with:
           myToken: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- Prepare brands for ZIP (HACS icons stay in /brand) ---
-      - name: Copy brands into integration directory
-        run: |
-          mkdir -p custom_components/terneo_bx/brands
-          cp brand/icon.png custom_components/terneo_bx/brands/icon.png
-          cp brand/logo.png custom_components/terneo_bx/brands/logo.png
-
       # --- Update manifest.json ---
       - name: Update manifest.json
         run: |
@@ -52,8 +45,12 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add custom_components/terneo_bx/manifest.json
-          git commit -m "Bump version to v${{ steps.version.outputs.version }}" || echo "No changes"
-          git push          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Bump version to v${{ steps.version.outputs.version }}"
+            git push origin main  # ← ИСПРАВЛЕНО: явно указываем ветку
+          fi
 
       # --- Create ZIP archive ---
       - name: Create ZIP archive
@@ -71,8 +68,5 @@ jobs:
           body: ${{ steps.changelog.outputs.changelog }}
           files: |
             terneo_bx.zip
-            brand/icon.png
-            brand/logo.png
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
