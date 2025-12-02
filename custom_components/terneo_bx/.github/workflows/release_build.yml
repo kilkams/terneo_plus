@@ -1,0 +1,35 @@
+name: Build & Upload HACS ZIP
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Забираем репозиторий
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Чистим имя репозитория для названия ZIP
+      - name: Prepare ZIP filename
+        id: vars
+        run: |
+          REPO_NAME=${GITHUB_REPOSITORY#*/}
+          echo "repo=$REPO_NAME" >> $GITHUB_OUTPUT
+
+      # 3. Создаём ZIP для HACS
+      - name: Create ZIP archive
+        run: |
+          mkdir -p dist
+          zip -r "dist/${{ steps.vars.outputs.repo }}.zip" custom_components/
+
+      # 4. Загружаем ZIP в релиз
+      - name: Upload ZIP to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
