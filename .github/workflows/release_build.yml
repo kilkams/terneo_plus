@@ -41,7 +41,7 @@ jobs:
           cd custom_components
           zip -r ../terneo_bx.zip terneo_bx
           cd ..
-
+ 
       # --- Attach assets ---
       - name: Create Release
         uses: softprops/action-gh-release@v2
