@@ -4,38 +4,46 @@ on:
   push:
     tags:
       - "v*"
-      
+
 permissions:
   contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
- 
+
     steps:
-      # --- Checkout repo ---
+      # --- Clone repo ---
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
- 
+
       # --- Extract version from tag ---
       - name: Get version
         id: version
         run: |
           echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      # --- Generate changelog ---
+      # --- Automatic changelog ---
       - name: Generate changelog
         id: changelog
         uses: metcalfc/changelog-generator@v4
         with:
           myToken: ${{ secrets.GITHUB_TOKEN }}
 
+      # --- Prepare brands for ZIP (HACS icons stay in /brand) ---
+      - name: Copy brands into integration directory
+        run: |
+          mkdir -p custom_components/terneo_bx/brands
+          cp brand/icon.png custom_components/terneo_bx/brands/icon.png
+          cp brand/logo.png custom_components/terneo_bx/brands/logo.png
+
       # --- Update manifest.json ---
       - name: Update manifest.json
         run: |
-          jq '.version = "${{ steps.version.outputs.version }}"' custom_components/terneo_bx/manifest.json > tmp.json
+          jq '.version = "${{ steps.version.outputs.version }}"' \
+            custom_components/terneo_bx/manifest.json > tmp.json
           mv tmp.json custom_components/terneo_bx/manifest.json
 
       # --- Commit updated manifest.json ---
@@ -45,16 +53,16 @@ jobs:
           git config --global user.email "actions@github.com"
           git add custom_components/terneo_bx/manifest.json
           git commit -m "Bump version to v${{ steps.version.outputs.version }}" || echo "No changes"
-          git push
+          git push          
 
-      # --- Create ZIP ---
+      # --- Create ZIP archive ---
       - name: Create ZIP archive
         run: |
           cd custom_components
           zip -r ../terneo_bx.zip terneo_bx
           cd ..
- 
-      # --- Create Release ---
+
+      # --- Publish Release & attach assets ---
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -63,7 +71,8 @@ jobs:
           body: ${{ steps.changelog.outputs.changelog }}
           files: |
             terneo_bx.zip
-            brands/icon.png
-            brands/logo.png
+            brand/icon.png
+            brand/logo.png
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
