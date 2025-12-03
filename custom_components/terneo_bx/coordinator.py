@@ -66,17 +66,20 @@ class TerneoCoordinator(DataUpdateCoordinator):
         await asyncio.sleep(1)
 
         # 4) Расписание
-        try:
-            schedule = await self.api.get_schedule()
-            tt = schedule.get("tt")
-            if not isinstance(tt, dict):
-                _LOGGER.warning("Invalid schedule payload, using empty dict")
-                tt = {}
-        except Exception as e:
-            _LOGGER.error(f"Failed to read schedule: {e}")
-            tt = {}
-
-        await asyncio.sleep(1)
+        if self._schedule_update_counter >= 5: 
+            try:
+                schedule = await self.api.get_schedule()
+                tt = schedule.get("tt")
+                if isinstance(tt, dict):
+                    self._cached_schedule = tt
+                self._schedule_update_counter = 0
+            except Exception as e:
+                _LOGGER.error(f"Failed to read schedule: {e}")
+        else:
+            self._schedule_update_counter += 1
+        
+        # Используем кэшированное расписание
+        tt = self._cached_schedule  
 
 
 
