@@ -95,7 +95,12 @@
       "schedule": {
         "name": "Розклад"
       }
-    }
+    },
+    "number": {
+      "brightness": {
+        "name": "Яскравість дисплея"
+      }
+    }  
   },
   "services": {
     "reset_energy": {

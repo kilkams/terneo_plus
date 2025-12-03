@@ -71,7 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # запускаем платформы
     await hass.config_entries.async_forward_entry_setups(
         entry,
-        ["climate", "sensor", "binary_sensor", "switch", "calendar"]
+        ["climate", "sensor", "binary_sensor", "switch", "number", "calendar"]
     )
 
     # Регистрируем сервисы (только один раз)
@@ -223,7 +223,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     unload_ok = await hass.config_entries.async_unload_platforms(
         entry,
-        ["climate", "sensor", "binary_sensor", "switch", "calendar"]
+        ["climate", "sensor", "binary_sensor", "switch", "number", "calendar"]
     )
 
     if unload_ok:
