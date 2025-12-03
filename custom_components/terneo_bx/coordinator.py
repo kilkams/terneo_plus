@@ -22,7 +22,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
 
         # Кэш для редко меняющихся данных
         self._cached_schedule = {}
-        self._cached_params = []
+        self._cached_time = []
         self._schedule_update_counter = 5
         self._time_update_counter = 20        
  
