@@ -51,12 +51,12 @@ jobs:
             git commit -m "Bump version to v${{ steps.version.outputs.version }}"
             git push origin main
           fi
-
+ 
       # --- Create ZIP archive with custom_components folder ---
       - name: Create ZIP archive
         run: |
           zip -r terneo_bx.zip custom_components/
-
+ 
       # --- Publish Release & attach assets ---
       - name: Create Release
         uses: softprops/action-gh-release@v2
