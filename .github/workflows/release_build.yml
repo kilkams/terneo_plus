@@ -56,7 +56,7 @@ jobs:
       - name: Create ZIP archive
         run: |
           zip -r terneo_bx.zip custom_components/
-
+ 
       # --- Publish Release & attach assets ---
       - name: Create Release
         uses: softprops/action-gh-release@v2
