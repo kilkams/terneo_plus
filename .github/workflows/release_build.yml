@@ -17,13 +17,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') && 'develop' || 'main' }}  # ← Динамический выбор ветки
 
       # --- Extract version from tag ---
       - name: Get version
         id: version
         run: |
-          echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Определяем из какой ветки собирать
+          if [[ "$VERSION" == *"-rc"* ]] || [[ "$VERSION" == *"-beta"* ]] || [[ "$VERSION" == *"-alpha"* ]]; then
+            echo "branch=develop" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "branch=main" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      # --- Re-checkout from correct branch ---
+      - name: Checkout correct branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.version.outputs.branch }}
+
+      # --- Show build info ---
+      - name: Build information
+        run: |
+          echo "Building version: ${{ steps.version.outputs.version }}"
+          echo "From branch: ${{ steps.version.outputs.branch }}"
+          echo "Pre-release: ${{ steps.version.outputs.is_prerelease }}"
+          echo "Current commit: $(git rev-parse HEAD)"
 
       # --- Automatic changelog ---
       - name: Generate changelog
@@ -39,32 +64,64 @@ jobs:
             custom_components/terneo_bx/manifest.json > tmp.json
           mv tmp.json custom_components/terneo_bx/manifest.json
 
-      # --- Commit updated manifest.json ---
+      # --- Commit updated manifest.json (только для стабильных релизов) ---
       - name: Commit version bump
+        if: steps.version.outputs.is_prerelease == 'false'  # ← Коммитим только для стабильных
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add custom_components/terneo_bx/manifest.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Bump version to v${{ steps.version.outputs.version }}"
-            git push origin main
+            git commit -m "🔖 Bump version to v${{ steps.version.outputs.version }}"
+            git push origin ${{ steps.version.outputs.branch }}
           fi
  
-      # --- Create ZIP archive with custom_components folder ---
+      # --- Create ZIP archive ---
       - name: Create ZIP archive
         run: |
           zip -r terneo_bx.zip custom_components/
+          sha256sum terneo_bx.zip > terneo_bx.zip.sha256
  
-      # --- Publish Release & attach assets ---
+      # --- Publish Release ---
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref }}
-          name: Release ${{ steps.version.outputs.version }}
-          body: ${{ steps.changelog.outputs.changelog }}
-          prerelease: ${{ contains(steps.version.outputs.version, '-rc') || contains(steps.version.outputs.version, '-beta') || contains(steps.version.outputs.version, '-alpha') }}          
-          files: terneo_bx.zip
+          name: "${{ steps.version.outputs.is_prerelease == 'true' && '🧪' || '🚀' }} Terneo BX v${{ steps.version.outputs.version }}"
+          body: |
+            # Terneo BX v${{ steps.version.outputs.version }}
+            
+            **Branch:** `${{ steps.version.outputs.branch }}`
+            **Commit:** `${{ github.sha }}`
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## 📦 Installation
+            
+            ### Via HACS
+            1. HACS → Integrations → ⋮ → Custom repositories
+            2. Add: `https://github.com/kilkams/terneo_plus`
+            3. Search "Terneo BX" → Install
+            
+            ### Manual
+            1. Download `terneo_bx.zip`
+            2. Extract to `config/custom_components/`
+            3. Restart Home Assistant
+            
+            ${{ steps.version.outputs.is_prerelease == 'true' && '⚠️ **This is a pre-release version for testing purposes.**' || '' }}
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
+          files: |
+            terneo_bx.zip
+            terneo_bx.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- Notify on success ---
+      - name: Build summary
+        if: success()
+        run: |
+          echo "✅ Release v${{ steps.version.outputs.version }} created successfully!"
+          echo "📦 Branch: ${{ steps.version.outputs.branch }}"
+          echo "${{ steps.version.outputs.is_prerelease == 'true' && '🧪 Pre-release' || '🚀 Stable release' }}"
