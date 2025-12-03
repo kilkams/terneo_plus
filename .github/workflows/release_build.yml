@@ -64,6 +64,7 @@ jobs:
           tag_name: ${{ github.ref }}
           name: Release ${{ steps.version.outputs.version }}
           body: ${{ steps.changelog.outputs.changelog }}
+          prerelease: ${{ contains(steps.version.outputs.version, '-rc') || contains(steps.version.outputs.version, '-beta') || contains(steps.version.outputs.version, '-alpha') }}          
           files: terneo_bx.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

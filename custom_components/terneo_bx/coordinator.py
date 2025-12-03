@@ -23,8 +23,8 @@ class TerneoCoordinator(DataUpdateCoordinator):
         # Кэш для редко меняющихся данных
         self._cached_schedule = {}
         self._cached_params = []
-        self._schedule_update_counter = 0
-        self._time_update_counter = 0        
+        self._schedule_update_counter = 5
+        self._time_update_counter = 20        
 
     async def _async_update_data(self):
         """Fetch full Terneo state."""
