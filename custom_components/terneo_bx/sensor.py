@@ -314,7 +314,7 @@ class TerneoApiResponseTimeSensor(SensorEntity):
             
             response_time_ms = (end_time - start_time).total_seconds() * 1000
             self._last_response_time = round(response_time_ms, 2)
-            
+             
         except Exception as e:
             _LOGGER.debug(f"Error measuring API response time: {e}")
             self._last_response_time = None    
