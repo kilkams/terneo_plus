@@ -51,7 +51,7 @@ jobs:
             git commit -m "Bump version to v${{ steps.version.outputs.version }}"
             git push origin main
           fi
-
+ 
       # --- Create ZIP archive with custom_components folder ---
       - name: Create ZIP archive
         run: |
