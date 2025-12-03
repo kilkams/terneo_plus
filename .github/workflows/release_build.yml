@@ -136,7 +136,7 @@ jobs:
             ### Via HACS
             1. HACS → Integrations → ⋮ → Custom repositories
             2. Add: `https://github.com/kilkams/terneo_plus`
-            3. Search "Terneo BX" → Install
+            3. Search "Terneo Plus" → Install
             
             ### Manual
             1. Download `terneo_bx.zip`

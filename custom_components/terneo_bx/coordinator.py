@@ -25,7 +25,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
         self._cached_time = []
         self._schedule_update_counter = 5
         self._time_update_counter = 20        
- 
+
     async def _async_update_data(self):
         """Fetch full Terneo state."""
 
