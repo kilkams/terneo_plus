@@ -93,7 +93,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
 
         except (ValueError, TypeError) as e:
             raise UpdateFailed(f"Invalid telemetry payload: {e}")
-
+ 
         # Разбор параметров - создаем словарь {id: value}
         params_dict = {}
         try:
