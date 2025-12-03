@@ -271,7 +271,7 @@ class TerneoApiErrorSensor(CoordinatorEntity, SensorEntity):
             "last_success": self.api.last_success.isoformat() if self.api.last_success else None,
         }
 
-
+ 
 class TerneoApiResponseTimeSensor(SensorEntity):
     """Сенсор времени ответа API."""
     
@@ -281,7 +281,6 @@ class TerneoApiResponseTimeSensor(SensorEntity):
     _attr_icon = "mdi:timer-outline"
 
     def __init__(self, api: TerneoApi, host: str, serial: str):
-        super().__init__(coordinator)
         self.api = api
         self._host = host
         self._serial = serial
