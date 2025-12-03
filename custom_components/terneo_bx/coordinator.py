@@ -46,13 +46,16 @@ class TerneoCoordinator(DataUpdateCoordinator):
         if self._time_update_counter >= 20:        
             try:
                 time_data = await self.api.get_time()
-                self._time_update_counter = 0
-                await asyncio.sleep(1)                
+                self._cached_time = time_data
+                self._time_update_counter = 0             
             except Exception as e:
                 _LOGGER.error(f"Failed to read time: {e}")
                 time_data = {}
+            await asyncio.sleep(1)                 
         else:
             self._time_update_counter += 1
+        # Используем кэшированное значение
+        time_data = self._cached_time
 
         # 3) Телеметрия
         try:
