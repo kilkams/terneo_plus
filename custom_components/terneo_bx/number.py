@@ -29,7 +29,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class TerneoBrightnessNumber(CoordinatorEntity, NumberEntity):
     """Number entity для управления яркостью дисплея."""
     
-    _attr_has_entity_name = True
     _attr_native_min_value = 0
     _attr_native_max_value = 9
     _attr_native_step = 1
@@ -41,8 +40,8 @@ class TerneoBrightnessNumber(CoordinatorEntity, NumberEntity):
         self.api = api
         self._host = host
         self._serial = serial
-        self._attr_name = f"Terneo {host} Brightness"
         self._attr_unique_id = f"terneo_{serial}_brightness"
+        self._attr_has_entity_name = True        
         self._attr_translation_key = "brightness"
 
     @property

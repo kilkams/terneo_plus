@@ -280,7 +280,7 @@ class TerneoApiResponseTimeSensor(SensorEntity):
     _attr_native_unit_of_measurement = "ms"
     _attr_icon = "mdi:timer-outline"
 
-    def __init__(self, coordinator: TerneoCoordinator, api: TerneoApi, host: str, serial: str):
+    def __init__(self, api: TerneoApi, host: str, serial: str):
         super().__init__(coordinator)
         self.api = api
         self._host = host
