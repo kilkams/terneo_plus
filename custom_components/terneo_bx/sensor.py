@@ -38,7 +38,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Диагностические сенсоры
     entities.append(TerneoApiErrorSensor(coordinator, api, host, serial))
-    entities.append(TerneoApiResponseTimeSensor(coordinator, api, host, serial))
+    entities.append(TerneoApiResponseTimeSensor(api, host, serial))
 
     async_add_entities(entities, update_before_add=True)
 
@@ -272,7 +272,7 @@ class TerneoApiErrorSensor(CoordinatorEntity, SensorEntity):
         }
 
 
-class TerneoApiResponseTimeSensor(CoordinatorEntity, SensorEntity):
+class TerneoApiResponseTimeSensor(SensorEntity):
     """Сенсор времени ответа API."""
     
     _attr_device_class = SensorDeviceClass.DURATION

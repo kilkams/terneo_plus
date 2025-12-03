@@ -95,7 +95,12 @@
       "schedule": {
         "name": "Schedule"
       }
-    }
+    },
+    "number": {
+      "brightness": {
+        "name": "Brightness"
+      }
+    }      
   },
   "services": {
     "reset_energy": {

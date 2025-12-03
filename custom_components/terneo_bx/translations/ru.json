@@ -95,7 +95,12 @@
       "schedule": {
         "name": "Расписание"
       }
-    }
+    },
+    "number": {
+      "brightness": {
+        "name": "Яркость дисплея"
+      }
+    }   
   },
   "services": {
     "reset_energy": {
