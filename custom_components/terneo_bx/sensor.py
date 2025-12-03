@@ -281,7 +281,6 @@ class TerneoApiResponseTimeSensor(SensorEntity):
     _attr_icon = "mdi:timer-outline"
 
     def __init__(self, api: TerneoApi, host: str, serial: str):
-        super().__init__(coordinator)
         self.api = api
         self._host = host
         self._serial = serial
