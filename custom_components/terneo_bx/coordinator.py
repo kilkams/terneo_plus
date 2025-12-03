@@ -42,7 +42,19 @@ class TerneoCoordinator(DataUpdateCoordinator):
 
         await asyncio.sleep(1)
 
-        # 2) Телеметрия
+        # 2) Время
+        if self._time_update_counter >= 20:        
+            try:
+                time_data = await self.api.get_time()
+                self._time_update_counter = 0
+                await asyncio.sleep(1)                
+            except Exception as e:
+                _LOGGER.error(f"Failed to read time: {e}")
+                time_data = {}
+        else:
+            self._time_update_counter += 1
+
+        # 3) Телеметрия
         try:
             telemetry = await self.api.get_telemetry()
         except Exception as e:
@@ -50,7 +62,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
         
         await asyncio.sleep(1)
 
-        # 3) Расписание
+        # 4) Расписание
         try:
             schedule = await self.api.get_schedule()
             tt = schedule.get("tt")
@@ -63,16 +75,8 @@ class TerneoCoordinator(DataUpdateCoordinator):
 
         await asyncio.sleep(1)
 
-        # 4) Время
-        if self._time_update_counter >= 20:        
-            try:
-                time_data = await self.api.get_time()
-                self._time_update_counter = 0
-            except Exception as e:
-                _LOGGER.error(f"Failed to read time: {e}")
-                time_data = {}
-        else:
-            self._time_update_counter += 1
+
+
         # Преобразуем структуру Terneo BX → нормальная
         try:
             # Температура воздуха (t.0) - делим на 10 для получения градусов
