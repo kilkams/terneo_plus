@@ -271,7 +271,7 @@ class TerneoApiErrorSensor(CoordinatorEntity, SensorEntity):
             "last_success": self.api.last_success.isoformat() if self.api.last_success else None,
         }
 
-
+ 
 class TerneoApiResponseTimeSensor(SensorEntity):
     """Сенсор времени ответа API."""
     
