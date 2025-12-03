@@ -1,5 +1,5 @@
 from datetime import timedelta
-import logging
+import logging, asyncio
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -20,6 +20,12 @@ class TerneoCoordinator(DataUpdateCoordinator):
         self.serial = serial
         self.host = host
 
+        # Кэш для редко меняющихся данных
+        self._cached_schedule = {}
+        self._cached_params = []
+        self._schedule_update_counter = 5
+        self._time_update_counter = 20        
+
     async def _async_update_data(self):
         """Fetch full Terneo state."""
 
@@ -34,7 +40,17 @@ class TerneoCoordinator(DataUpdateCoordinator):
             _LOGGER.error(f"Failed to read params: {e}")
             par = []
 
-        # 2) Расписание
+        await asyncio.sleep(1)
+
+        # 2) Телеметрия
+        try:
+            telemetry = await self.api.get_telemetry()
+        except Exception as e:
+            raise UpdateFailed(f"Failed to read telemetry: {e}")
+        
+        await asyncio.sleep(1)
+
+        # 3) Расписание
         try:
             schedule = await self.api.get_schedule()
             tt = schedule.get("tt")
@@ -45,19 +61,18 @@ class TerneoCoordinator(DataUpdateCoordinator):
             _LOGGER.error(f"Failed to read schedule: {e}")
             tt = {}
 
-        # 3) Время
-        try:
-            time_data = await self.api.get_time()
-        except Exception as e:
-            _LOGGER.error(f"Failed to read time: {e}")
-            time_data = {}
+        await asyncio.sleep(1)
 
-        # 4) Телеметрия
-        try:
-            telemetry = await self.api.get_telemetry()
-        except Exception as e:
-            raise UpdateFailed(f"Failed to read telemetry: {e}")
-
+        # 4) Время
+        if self._time_update_counter >= 20:        
+            try:
+                time_data = await self.api.get_time()
+                self._time_update_counter = 0
+            except Exception as e:
+                _LOGGER.error(f"Failed to read time: {e}")
+                time_data = {}
+        else:
+            self._time_update_counter += 1
         # Преобразуем структуру Terneo BX → нормальная
         try:
             # Температура воздуха (t.0) - делим на 10 для получения градусов
@@ -78,7 +93,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
 
         except (ValueError, TypeError) as e:
             raise UpdateFailed(f"Invalid telemetry payload: {e}")
-
+ 
         # Разбор параметров - создаем словарь {id: value}
         params_dict = {}
         try:
@@ -129,6 +144,10 @@ class TerneoCoordinator(DataUpdateCoordinator):
             hvac_mode_raw = params_dict.get(118)
             hvac_mode = int(hvac_mode_raw) if hvac_mode_raw else 0
 
+            # ID=23: brightness - яркость экрана (0-9)
+            brightness_raw = params_dict.get(23)
+            brightness = int(brightness_raw) if brightness_raw else None
+
         except (ValueError, TypeError, KeyError) as e:
             _LOGGER.error(f"Params parsing error: {e}")
             target_temp = None
@@ -140,6 +159,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             power_off = 0
             hvac_mode = 0
             power_w = None
+            brightness = 0            
 
         # Итоговые данные
         return {
@@ -161,6 +181,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             "tt": tt,
             "time": time_data.get("time") if time_data else None,
             "params_dict": params_dict,
+            "brightness": brightness,
             "raw": {
                 "params": params if par else {},
                 "telemetry": telemetry,
