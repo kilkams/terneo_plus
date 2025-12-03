@@ -15,15 +15,22 @@ class TerneoApi:
         self.error_count = 0  
         self.last_error = None  
         self.last_success = None  
+        self.last_request_duration = None
         _LOGGER.info("TerneoApi initialized with host=%s, sn=%s", host, sn)
+
     async def _post(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         url = f"http://{self.host}{API_ENDPOINT}"
         _LOGGER.debug("POST %s -> %s", url, payload)
+        start_time = datetime.now()
         try:
             async with async_timeout.timeout(10):
                 async with aiohttp.ClientSession() as session:
                     async with session.post(url, json=payload) as resp:
                         raw = await resp.text()
+                        # Измеряем время ответа
+                        end_time = datetime.now()
+                        self.last_request_duration = (end_time - start_time).total_seconds() * 1000
+
                         if resp.status != 200:
                             self.error_count += 1  
                             self.last_error = f"HTTP {resp.status}"                           
@@ -38,10 +45,14 @@ class TerneoApi:
                             _LOGGER.debug("Invalid JSON response: %s", raw)
                             raise CannotConnect(f"Invalid JSON: {e}")
         except asyncio.TimeoutError:
+            end_time = datetime.now()
+            self.last_request_duration = (end_time - start_time).total_seconds() * 1000
             self.error_count += 1 
             self.last_error = "Timeout"  
             raise CannotConnect("Request timeout")                        
         except Exception as e:
+            end_time = datetime.now()
+            self.last_request_duration = (end_time - start_time).total_seconds() * 1000
             self.error_count += 1 
             self.last_error = str(e)            
             raise CannotConnect(f"API request failed: {e}")

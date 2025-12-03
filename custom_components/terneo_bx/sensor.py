@@ -38,7 +38,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Диагностические сенсоры
     entities.append(TerneoApiErrorSensor(coordinator, api, host, serial))
-    entities.append(TerneoApiResponseTimeSensor(api, host, serial))
+    entities.append(TerneoApiResponseTimeSensor(coordinator, api, host, serial))
 
     async_add_entities(entities, update_before_add=True)
 
@@ -272,7 +272,7 @@ class TerneoApiErrorSensor(CoordinatorEntity, SensorEntity):
         }
 
  
-class TerneoApiResponseTimeSensor(SensorEntity):
+class TerneoApiResponseTimeSensor(CoordinatorEntity, SensorEntity):
     """Сенсор времени ответа API."""
     
     _attr_device_class = SensorDeviceClass.DURATION
@@ -280,14 +280,14 @@ class TerneoApiResponseTimeSensor(SensorEntity):
     _attr_native_unit_of_measurement = "ms"
     _attr_icon = "mdi:timer-outline"
 
-    def __init__(self, api: TerneoApi, host: str, serial: str):
+    def __init__(self,  coordinator: TerneoCoordinator, api: TerneoApi, host: str, serial: str):
+        super().__init__(coordinator)        
         self.api = api
         self._host = host
         self._serial = serial
         self._attr_has_entity_name = True
         self._attr_translation_key = "api_response_time"
         self._attr_unique_id = f"terneo_{serial}_api_response_time"
-        self._last_response_time = None
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -301,20 +301,14 @@ class TerneoApiResponseTimeSensor(SensorEntity):
     @property
     def native_value(self):
         """Возвращает время ответа API в миллисекундах."""
-        return self._last_response_time
+        if self.api.last_request_duration is not None:
+            return round(self.api.last_request_duration, 2)
+        return None
 
-    async def async_update(self):
-        """Измерить время ответа API."""
-        from datetime import datetime
-        
-        try:
-            start_time = datetime.now()
-            await self.api.get_telemetry()
-            end_time = datetime.now()
-            
-            response_time_ms = (end_time - start_time).total_seconds() * 1000
-            self._last_response_time = round(response_time_ms, 2)
-             
-        except Exception as e:
-            _LOGGER.debug(f"Error measuring API response time: {e}")
-            self._last_response_time = None    
+    @property
+    def extra_state_attributes(self):
+        """Дополнительные атрибуты."""
+        return {
+            "last_success": self.api.last_success.isoformat() if self.api.last_success else None,
+            "host": self.api.host,
+        }

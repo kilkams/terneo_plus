@@ -12,61 +12,88 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # --- Clone repo ---
+      # --- Determine branch from tag ---
+      - name: Determine branch
+        id: branch
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG_NAME#v}
+          
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Определяем ветку на основе версии
+          if [[ "$VERSION" == *"-rc"* ]] || [[ "$VERSION" == *"-beta"* ]] || [[ "$VERSION" == *"-alpha"* ]]; then
+            echo "branch=develop" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "Building pre-release from develop"
+          else
+            echo "branch=main" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "Building stable release from main"
+          fi
+
+      # --- Clone repo from correct branch ---
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') && 'develop' || 'main' }}  # ← Динамический выбор ветки
-
-      # --- Extract version from tag ---
-      - name: Get version
-        id: version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
-          # Определяем из какой ветки собирать
-          if [[ "$VERSION" == *"-rc"* ]] || [[ "$VERSION" == *"-beta"* ]] || [[ "$VERSION" == *"-alpha"* ]]; then
-            echo "branch=develop" >> $GITHUB_OUTPUT
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-          else
-            echo "branch=main" >> $GITHUB_OUTPUT
-            echo "is_prerelease=false" >> $GITHUB_OUTPUT
-          fi
-
-      # --- Re-checkout from correct branch ---
-      - name: Checkout correct branch
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ steps.version.outputs.branch }}
+          ref: ${{ steps.branch.outputs.branch }}
 
       # --- Show build info ---
       - name: Build information
         run: |
-          echo "Building version: ${{ steps.version.outputs.version }}"
-          echo "From branch: ${{ steps.version.outputs.branch }}"
-          echo "Pre-release: ${{ steps.version.outputs.is_prerelease }}"
-          echo "Current commit: $(git rev-parse HEAD)"
+          echo "📦 Building version: ${{ steps.branch.outputs.version }}"
+          echo "🌿 From branch: ${{ steps.branch.outputs.branch }}"
+          echo "🏷️  Tag: ${{ steps.branch.outputs.tag_name }}"
+          echo "🧪 Pre-release: ${{ steps.branch.outputs.is_prerelease }}"
+          echo "📝 Current commit: $(git rev-parse HEAD)"
+          echo "📍 Current branch: $(git branch --show-current || echo 'detached HEAD')"
 
       # --- Automatic changelog ---
       - name: Generate changelog
         id: changelog
-        uses: metcalfc/changelog-generator@v4
-        with:
-          myToken: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREVIOUS_TAG" ]; then
+            CHANGELOG="## 🎉 Initial Release"
+          else
+            echo "Generating changelog from $PREVIOUS_TAG to ${{ steps.branch.outputs.tag_name }}"
+            
+            COMMITS=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s (%h)" --no-merges)
+            
+            FEATURES=$(echo "$COMMITS" | grep -E "^feat[:(]" | sed 's/^feat[:(] */- /' || echo "")
+            FIXES=$(echo "$COMMITS" | grep -E "^fix[:(]" | sed 's/^fix[:(] */- /' || echo "")
+            DOCS=$(echo "$COMMITS" | grep -E "^docs[:(]" | sed 's/^docs[:(] */- /' || echo "")
+            CHORE=$(echo "$COMMITS" | grep -E "^chore[:(]" | sed 's/^chore[:(] */- /' || echo "")
+            OTHERS=$(echo "$COMMITS" | grep -vE "^(feat|fix|docs|chore)[:(]" | sed 's/^/- /' || echo "")
+            
+            CHANGELOG="## 📋 Changes\n\n"
+            
+            [ -n "$FEATURES" ] && CHANGELOG="${CHANGELOG}### ✨ New Features\n${FEATURES}\n\n"
+            [ -n "$FIXES" ] && CHANGELOG="${CHANGELOG}### 🐛 Bug Fixes\n${FIXES}\n\n"
+            [ -n "$DOCS" ] && CHANGELOG="${CHANGELOG}### 📚 Documentation\n${DOCS}\n\n"
+            [ -n "$CHORE" ] && CHANGELOG="${CHANGELOG}### 🔧 Maintenance\n${CHORE}\n\n"
+            [ -n "$OTHERS" ] && CHANGELOG="${CHANGELOG}### 📝 Other Changes\n${OTHERS}\n\n"
+          fi
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       # --- Update manifest.json ---
       - name: Update manifest.json
         run: |
-          jq '.version = "${{ steps.version.outputs.version }}"' \
+          jq '.version = "${{ steps.branch.outputs.version }}"' \
             custom_components/terneo_bx/manifest.json > tmp.json
           mv tmp.json custom_components/terneo_bx/manifest.json
+          
+          echo "Updated manifest.json to version ${{ steps.branch.outputs.version }}"
 
       # --- Commit updated manifest.json (только для стабильных релизов) ---
       - name: Commit version bump
-        if: steps.version.outputs.is_prerelease == 'false'  # ← Коммитим только для стабильных
+        if: steps.branch.outputs.is_prerelease == 'false'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -74,8 +101,9 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "🔖 Bump version to v${{ steps.version.outputs.version }}"
-            git push origin ${{ steps.version.outputs.branch }}
+            git commit -m "🔖 Bump version to v${{ steps.branch.outputs.version }}"
+            git push origin ${{ steps.branch.outputs.branch }}
+            echo "✅ Version bumped and pushed to ${{ steps.branch.outputs.branch }}"
           fi
  
       # --- Create ZIP archive ---
@@ -83,17 +111,22 @@ jobs:
         run: |
           zip -r terneo_bx.zip custom_components/
           sha256sum terneo_bx.zip > terneo_bx.zip.sha256
+          
+          echo "📦 Archive created:"
+          ls -lh terneo_bx.zip
+          echo "🔐 Checksum:"
+          cat terneo_bx.zip.sha256
  
       # --- Publish Release ---
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          name: "${{ steps.version.outputs.is_prerelease == 'true' && '🧪' || '🚀' }} Terneo BX v${{ steps.version.outputs.version }}"
+          tag_name: ${{ steps.branch.outputs.tag_name }}
+          name: "${{ steps.branch.outputs.is_prerelease == 'true' && '🧪' || '🚀' }} Terneo BX v${{ steps.branch.outputs.version }}"
           body: |
-            # Terneo BX v${{ steps.version.outputs.version }}
+            # Terneo BX v${{ steps.branch.outputs.version }}
             
-            **Branch:** `${{ steps.version.outputs.branch }}`
+            **Branch:** `${{ steps.branch.outputs.branch }}`
             **Commit:** `${{ github.sha }}`
             
             ${{ steps.changelog.outputs.changelog }}
@@ -110,18 +143,18 @@ jobs:
             2. Extract to `config/custom_components/`
             3. Restart Home Assistant
             
-            ${{ steps.version.outputs.is_prerelease == 'true' && '⚠️ **This is a pre-release version for testing purposes.**' || '' }}
-          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
+            ${{ steps.branch.outputs.is_prerelease == 'true' && '⚠️ **This is a pre-release version for testing purposes.**' || '' }}
+          prerelease: ${{ steps.branch.outputs.is_prerelease == 'true' }}
           files: |
             terneo_bx.zip
             terneo_bx.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- Notify on success ---
+      # --- Success notification ---
       - name: Build summary
         if: success()
         run: |
-          echo "✅ Release v${{ steps.version.outputs.version }} created successfully!"
-          echo "📦 Branch: ${{ steps.version.outputs.branch }}"
-          echo "${{ steps.version.outputs.is_prerelease == 'true' && '🧪 Pre-release' || '🚀 Stable release' }}"
+          echo "✅ Release v${{ steps.branch.outputs.version }} created successfully!"
+          echo "📦 Branch: ${{ steps.branch.outputs.branch }}"
+          echo "${{ steps.branch.outputs.is_prerelease == 'true' && '🧪 Pre-release' || '🚀 Stable release' }}"
