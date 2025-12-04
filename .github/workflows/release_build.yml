@@ -58,7 +58,7 @@ jobs:
           mv tmp.json custom_components/terneo_bx/manifest.json
           
           echo "Updated manifest.json to version ${{ steps.branch.outputs.version }}"
-
+ 
       # --- Commit and push version bump (только для стабильных релизов) ---
       - name: Commit version bump
         if: steps.branch.outputs.is_prerelease == 'false'
