@@ -50,6 +50,38 @@ jobs:
           echo "📝 Current commit: $(git rev-parse HEAD)"
           echo "📍 Current branch: $(git branch --show-current || echo 'detached HEAD')"
 
+      # --- Update manifest.json ---
+      - name: Update manifest.json
+        run: |
+          jq '.version = "${{ steps.branch.outputs.version }}"' \
+            custom_components/terneo_bx/manifest.json > tmp.json
+          mv tmp.json custom_components/terneo_bx/manifest.json
+          
+          echo "Updated manifest.json to version ${{ steps.branch.outputs.version }}"
+
+      # --- Commit and push version bump (только для стабильных релизов) ---
+      - name: Commit version bump
+        if: steps.branch.outputs.is_prerelease == 'false'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add custom_components/terneo_bx/manifest.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "🔖 Bump version to v${{ steps.branch.outputs.version }}"
+            
+            # Перемещаем тег на новый коммит
+            git tag -fa ${{ steps.branch.outputs.tag_name }} -m "Release v${{ steps.branch.outputs.version }}"
+            
+            # Пушим с force для обновления тега
+            git push origin ${{ steps.branch.outputs.branch }}
+            git push origin ${{ steps.branch.outputs.tag_name }} --force
+            
+            echo "✅ Version bumped and pushed to ${{ steps.branch.outputs.branch }}"
+            echo "✅ Tag moved to new commit"
+          fi
+
       # --- Automatic changelog ---
       - name: Generate changelog
         id: changelog
@@ -81,30 +113,6 @@ jobs:
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-
-      # --- Update manifest.json ---
-      - name: Update manifest.json
-        run: |
-          jq '.version = "${{ steps.branch.outputs.version }}"' \
-            custom_components/terneo_bx/manifest.json > tmp.json
-          mv tmp.json custom_components/terneo_bx/manifest.json
-          
-          echo "Updated manifest.json to version ${{ steps.branch.outputs.version }}"
-
-      # --- Commit updated manifest.json (только для стабильных релизов) ---
-      - name: Commit version bump
-        if: steps.branch.outputs.is_prerelease == 'false'
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add custom_components/terneo_bx/manifest.json
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "🔖 Bump version to v${{ steps.branch.outputs.version }}"
-            git push origin ${{ steps.branch.outputs.branch }}
-            echo "✅ Version bumped and pushed to ${{ steps.branch.outputs.branch }}"
-          fi
  
       # --- Create ZIP archive ---
       - name: Create ZIP archive
