@@ -81,7 +81,7 @@ jobs:
             echo "✅ Version bumped and pushed to ${{ steps.branch.outputs.branch }}"
             echo "✅ Tag moved to new commit"
           fi
-
+ 
       # --- Automatic changelog ---
       - name: Generate changelog
         id: changelog
