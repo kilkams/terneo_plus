@@ -48,7 +48,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
                 raise UpdateFailed(f"Failed to read params and no cached data: {e}")
 
         await asyncio.sleep(1)
-
+ 
         # 2) Время (некритичные данные)
         if self._time_update_counter >= 20:        
             try:
