@@ -114,7 +114,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode):
         """Установить режим HVAC."""
         _LOGGER.debug(f"Setting HVAC mode to: {hvac_mode}")
-        
+       
         try:
             if hvac_mode == HVACMode.OFF:
                 # Выключить устройство: ID=125 (powerOff) = 1
