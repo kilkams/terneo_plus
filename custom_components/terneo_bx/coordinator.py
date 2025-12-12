@@ -227,10 +227,10 @@ class TerneoCoordinator(DataUpdateCoordinator):
             },
         }
 
-def calc_delay(self):
-    dur = self.api.last_request_duration
-    if not dur:
-        return 1.0
-    delay = max(self._min_delay, min(self._max_delay, (dur / 1000) * self._delay_multiplier))
-    return delay
+    def calc_delay(self):
+        dur = self.api.last_request_duration
+        if not dur:
+            return 1.0
+        delay = max(self._min_delay, min(self._max_delay, (dur / 1000) * self._delay_multiplier))
+        return delay
         
