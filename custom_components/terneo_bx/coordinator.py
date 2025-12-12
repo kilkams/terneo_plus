@@ -24,7 +24,12 @@ class TerneoCoordinator(DataUpdateCoordinator):
         self._cached_schedule = {}
         self._cached_time = {}
         self._schedule_update_counter = 5
-        self._time_update_counter = 20        
+        self._time_update_counter = 20   
+
+        self._min_delay = 0.2   # минимальная задержка в секундах
+        self._max_delay = 5.0   # максимальная задержка
+        self._delay_multiplier = 1.4 # коэффициент задержки
+
 
     async def _async_update_data(self):
         """Fetch full Terneo state."""
@@ -47,7 +52,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             else:
                 raise UpdateFailed(f"Failed to read params and no cached data: {e}")
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(self.calc_delay())
  
         # 2) Время (некритичные данные)
         if self._time_update_counter >= 20:        
@@ -62,7 +67,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
                 _LOGGER.error(f"Failed to read time: {e}")
             finally:
                 self._time_update_counter = 0
-            await asyncio.sleep(1)                 
+            await asyncio.sleep(self.calc_delay())               
         else:
             self._time_update_counter += 1
         
@@ -83,7 +88,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
             else:
                 raise UpdateFailed(f"Failed to read telemetry and no cached data: {e}")
         
-        await asyncio.sleep(1)
+        await asyncio.sleep(self.calc_delay())
 
         # 4) Расписание (некритичные данные)
         if self._schedule_update_counter >= 5: 
@@ -221,3 +226,11 @@ class TerneoCoordinator(DataUpdateCoordinator):
                 "telemetry": telemetry,
             },
         }
+
+def calc_delay(self):
+    dur = self.api.last_request_duration
+    if not dur:
+        return 1.0
+    delay = max(self._min_delay, min(self._max_delay, (dur / 1000) * self._delay_multiplier))
+    return delay
+        

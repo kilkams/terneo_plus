@@ -104,7 +104,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
             
             # ID=31 - setTemperature
             await self.api.set_parameter(31, int(temperature), self._serial)
-            await asyncio.sleep(1)
+            await asyncio.sleep(self.coordinator.calc_delay())
             await self.coordinator.async_refresh()
         except CannotConnect:
             _LOGGER.error("Cannot connect to set temperature")
@@ -131,7 +131,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
                 _LOGGER.error(f"Unsupported HVAC mode: {hvac_mode}")
                 return
             
-            await asyncio.sleep(1)
+            await asyncio.sleep(self.coordinator.calc_delay())
             await self.coordinator.async_refresh()
             
         except CannotConnect:
