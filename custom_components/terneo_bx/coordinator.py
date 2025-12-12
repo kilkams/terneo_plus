@@ -199,7 +199,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
         except (ValueError, TypeError, KeyError) as e:
             _LOGGER.error(f"Params parsing error: {e}")
             raise UpdateFailed(f"Params parsing error: {e}")
-
+ 
         # Итоговые данные
         return {
             "temp_air": temp_air,
