@@ -30,7 +30,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
         self._max_delay = 5.0   # максимальная задержка
         self._delay_multiplier = 1.8 # коэффициент задержки
 
-
+ 
     async def _async_update_data(self):
         """Fetch full Terneo state."""
         
