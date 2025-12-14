@@ -96,25 +96,25 @@ class TerneoApi:
             body["sn"] = sn or self.sn
         return await self._post(body)
 
-async def set_parameters(self, params: dict[int, Any], sn: str | None = None):
-    """
-    Safe multi-parameter write using cmd=1
-    """
-    par = []
+    async def set_parameters(self, params: dict[int, Any], sn: str | None = None):
+        """
+        Safe multi-parameter write using cmd=1
+        """
+        par = []
 
-    for param_id, value in params.items():
-        param_type = PARAM_TYPES.get(param_id, 2)
-        par.append([param_id, param_type, str(value)])
+        for param_id, value in params.items():
+            param_type = PARAM_TYPES.get(param_id, 2)
+            par.append([param_id, param_type, str(value)])
 
-    body = {
-        "cmd": CMD_SET_PARAM,
-        "par": par,
-    }
+        body = {
+            "cmd": CMD_SET_PARAM,
+            "par": par,
+        }
 
-    if sn or self.sn:
-        body["sn"] = sn or self.sn
+        if sn or self.sn:
+            body["sn"] = sn or self.sn
 
-    return await self._post(body)
+        return await self._post(body)
 
 
     # HELPERS
