@@ -5,7 +5,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 _LOGGER = logging.getLogger(__name__)
 
-
+ 
 class TerneoCoordinator(DataUpdateCoordinator):
     """Coordinator for Terneo BX."""
 
@@ -28,7 +28,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
 
         self._min_delay = 0.2   # минимальная задержка в секундах
         self._max_delay = 5.0   # максимальная задержка
-        self._delay_multiplier = 1.8 # коэффициент задержки
+        self._delay_multiplier = 1.4 # коэффициент задержки
 
  
     async def _async_update_data(self):

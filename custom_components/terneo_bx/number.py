@@ -77,7 +77,7 @@ class TerneoBrightnessNumber(CoordinatorEntity, NumberEntity):
             await self.api.set_parameter(23, brightness, self._serial)
             
             # Небольшая задержка для применения изменений
-            await asyncio.sleep(1)
+            await asyncio.sleep(self.coordinator.calc_delay())
             
             # Обновляем данные
             await self.coordinator.async_refresh()
