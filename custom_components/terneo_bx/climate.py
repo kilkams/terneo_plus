@@ -99,11 +99,12 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
             current_mode = self.coordinator.data.get("mode", 0)
             
             if power_off == 1 or current_mode == 0:
-                await self.api.set_parameter(125, 0, self._serial)  # Включить
-                await self.api.set_parameter(2, 1, self._serial)     # Ручной режим
+                await self.api.set_parameters({125: 0, 2: 1}, sn=self._serial)  # Включить
+#                await self.api.set_parameter(2, 1, self._serial)     # Ручной режим
             
             # ID=31 - setTemperature
-            await self.api.set_parameter(31, int(temperature), self._serial)
+            await self.api.set_parameters({125: 0, 2: 1, 31: int(temperature)}, sn=self._serial)
+#            await self.api.set_parameter(31, int(temperature), self._serial)
             await asyncio.sleep(self.coordinator.calc_delay())
             await self.coordinator.async_refresh()
         except CannotConnect:
@@ -121,12 +122,10 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
                 await self.api.set_parameter(125, 1, self._serial)
             elif hvac_mode == HVACMode.AUTO:
                 # Режим расписания: ID=2 (mode) = 0, ID=125 (powerOff) = 0
-                await self.api.set_parameter(125, 0, self._serial)
-                await self.api.set_parameter(2, 0, self._serial)
+                await self.api.set_parameters({125: 0, 2: 0}, sn=self._serial)
             elif hvac_mode == HVACMode.HEAT:
                 # Ручной режим: ID=2 (mode) = 1, ID=125 (powerOff) = 0
-                await self.api.set_parameter(125, 0, self._serial)
-                await self.api.set_parameter(2, 1, self._serial)
+                await self.api.set_parameters({125: 0, 2: 1}, sn=self._serial)
             else:
                 _LOGGER.error(f"Unsupported HVAC mode: {hvac_mode}")
                 return

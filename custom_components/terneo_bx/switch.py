@@ -81,7 +81,7 @@ class TerneoBaseSwitch(CoordinatorEntity, SwitchEntity):
             _LOGGER.debug(f"Turning on switch: param_id={self._param_id}, translation_key={self._attr_translation_key}")
             await self.api.set_parameter(self._param_id, 1, self._serial)
             
-            await asyncio.sleep(1)
+            await asyncio.sleep(self.coordinator.calc_delay())
             await self.coordinator.async_refresh()
             
         except CannotConnect as e:
@@ -95,7 +95,7 @@ class TerneoBaseSwitch(CoordinatorEntity, SwitchEntity):
             _LOGGER.debug(f"Turning off switch: param_id={self._param_id}, translation_key={self._attr_translation_key}")
             await self.api.set_parameter(self._param_id, 0, self._serial)
             
-            await asyncio.sleep(1)
+            await asyncio.sleep(self.coordinator.calc_delay())
             await self.coordinator.async_refresh()
             
         except CannotConnect as e:
