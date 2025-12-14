@@ -101,7 +101,7 @@ class TerneoApi:
         Safe multi-parameter write using cmd=1
         """
         par = []
-
+ 
         for param_id, value in params.items():
             param_type = PARAM_TYPES.get(param_id, 2)
             par.append([param_id, param_type, str(value)])
