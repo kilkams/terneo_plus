@@ -5,7 +5,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 _LOGGER = logging.getLogger(__name__)
 
-
+ 
 class TerneoCoordinator(DataUpdateCoordinator):
     """Coordinator for Terneo BX."""
 
