@@ -99,18 +99,41 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
             current_mode = self.coordinator.data.get("mode", 0)
             
             if power_off == 1 or current_mode == 0:
-                await self.api.set_parameters({125: 0, 2: 1}, sn=self._serial)  # Включить
-#                await self.api.set_parameter(2, 1, self._serial)     # Ручной режим
+                await self.api.set_parameters({125: 0, 2: 1}, sn=self._serial)
             
             # ID=31 - setTemperature
             await self.api.set_parameters({125: 0, 2: 1, 31: int(temperature)}, sn=self._serial)
-#            await self.api.set_parameter(31, int(temperature), self._serial)
             await asyncio.sleep(self.coordinator.calc_delay())
             await self.coordinator.async_refresh()
         except CannotConnect:
             _LOGGER.error("Cannot connect to set temperature")
         except Exception as e:
             _LOGGER.error(f"Error setting temperature: {e}")
+
+    async def async_turn_on(self):
+        """Включить устройство → всегда переход в расписание."""
+        try:
+            await self.api.set_parameters(
+                {
+                    125: 0,  # powerOff = 0
+                    2: 0,    # mode = schedule
+                },
+                sn=self._serial
+            )
+            await asyncio.sleep(self.coordinator.calc_delay())
+            await self.coordinator.async_refresh()
+        except CannotConnect:
+            _LOGGER.error("Cannot connect to turn on device")
+
+
+    async def async_turn_off(self):
+        """Выключить устройство."""
+        try:
+            await self.api.set_parameters({125: 1, 2: 1}, sn=self._serial)
+            await asyncio.sleep(self.coordinator.calc_delay())
+            await self.coordinator.async_refresh()
+        except CannotConnect:
+            _LOGGER.error("Cannot connect to turn off device")
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Установить режим HVAC."""
@@ -119,7 +142,7 @@ class TerneoClimate(CoordinatorEntity, ClimateEntity):
         try:
             if hvac_mode == HVACMode.OFF:
                 # Выключить устройство: ID=125 (powerOff) = 1
-                await self.api.set_parameter(125, 1, self._serial)
+                await self.api.set_parameters({125: 1, 2: 1}, sn=self._serial)
             elif hvac_mode == HVACMode.AUTO:
                 # Режим расписания: ID=2 (mode) = 0, ID=125 (powerOff) = 0
                 await self.api.set_parameters({125: 0, 2: 0}, sn=self._serial)
