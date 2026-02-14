@@ -19,7 +19,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
         self.api = api
         self.serial = serial
         self.host = host
-         
+          
         # Кэш для редко меняющихся данных
         self._cached_schedule = {}
         self._cached_time = {}

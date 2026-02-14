@@ -11,7 +11,7 @@ from .coordinator import TerneoCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-
+ 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Terneo BX component."""
     hass.data.setdefault(DOMAIN, {})

@@ -25,7 +25,7 @@
           "delay_multiplier": "Multiplier for delays between API requests (0.5-5.0, recommended: 1.0-2.0)"
         }
       }
-    },
+    }, 
     "error": {
       "cannot_connect": "Failed to connect to the device",
       "host_required": "IP address is required",

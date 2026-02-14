@@ -34,7 +34,7 @@
     },
     "abort": {
       "already_configured": "Устройство уже настроено"
-    }
+    } 
   },
   "options": {
     "step": {

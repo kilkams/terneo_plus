@@ -13,7 +13,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
-
+ 
         # Получаем текущие значения из options или data
         current_scan_interval = self.entry.options.get(
             'scan_interval',
