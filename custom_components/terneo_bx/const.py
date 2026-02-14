@@ -1,5 +1,6 @@
 DOMAIN = "terneo_bx"
-DEFAULT_SCAN_INTERVAL = 20
+DEFAULT_SCAN_INTERVAL = 30
+DEFAULT_DELAY_MULTIPLIER = 1.4  # коэффициент задержки между запросами
 API_ENDPOINT = "/api.cgi"
 CMD_TELEMETRY = 4
 CMD_PARAMS = 1
@@ -10,6 +11,12 @@ LOGGER = None
 # Константы для энергетического сенсора
 ENERGY_UPDATE_INTERVAL_MAX = 3600  # Максимальный интервал обновления (1 час)
 ENERGY_MIN_INCREMENT = 0.001  # Минимальное значимое приращение энергии (кВт*ч)
+
+# Минимальные и максимальные значения для настроек
+MIN_SCAN_INTERVAL = 5
+MAX_SCAN_INTERVAL = 300
+MIN_DELAY_MULTIPLIER = 0.5
+MAX_DELAY_MULTIPLIER = 5.0
 
 # Типы данных параметров (из документации Terneo)
 # 1 = int8

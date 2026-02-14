@@ -5,7 +5,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
+from .const import DOMAIN, DEFAULT_SCAN_INTERVAL, DEFAULT_DELAY_MULTIPLIER
 from .api import TerneoApi
 from .coordinator import TerneoCoordinator
 
@@ -23,9 +23,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     host = entry.data["host"]
     serial = entry.data.get("serial")  
+    
+    # Получаем scan_interval из options (если есть) или из data
     scan_interval = entry.options.get(
         "scan_interval",
         entry.data.get("scan_interval", DEFAULT_SCAN_INTERVAL)
+    )
+    
+    # Получаем delay_multiplier из options (если есть) или из data
+    delay_multiplier = entry.options.get(
+        "delay_multiplier",
+        entry.data.get("delay_multiplier", DEFAULT_DELAY_MULTIPLIER)
     )
 
     api = TerneoApi(host, sn=serial)
@@ -55,7 +63,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         api=api,
         update_interval=timedelta(seconds=scan_interval),
         serial=serial,
-        host=host, 
+        host=host,
+        delay_multiplier=delay_multiplier,  # Передаем параметр
     )
 
     # первый fetch данных
@@ -77,7 +86,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Регистрируем сервисы (только один раз)
     await _register_services(hass)
 
-    _LOGGER.info("Terneo BX setup completed for %s (SN: %s)", host, serial)
+    # Подписываемся на изменения options
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
+    _LOGGER.info("Terneo BX setup completed for %s (SN: %s), delay_multiplier: %.2f", host, serial, delay_multiplier)
     return True
 
 
@@ -234,6 +246,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.services.async_remove(DOMAIN, "reset_energy")
             hass.services.async_remove(DOMAIN, "blink")
             hass.services.async_remove(DOMAIN, "restart")
+            hass.services.async_remove(DOMAIN, "reset_api_errors")
             _LOGGER.info("Removed all Terneo services")
 
     return unload_ok
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload config entry when options change."""
+    await hass.config_entries.async_reload(entry.entry_id)

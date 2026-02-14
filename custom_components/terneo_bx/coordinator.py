@@ -9,7 +9,7 @@ _LOGGER = logging.getLogger(__name__)
 class TerneoCoordinator(DataUpdateCoordinator):
     """Coordinator for Terneo BX."""
 
-    def __init__(self, hass, api, update_interval, serial, host):
+    def __init__(self, hass, api, update_interval, serial, host, delay_multiplier=1.4):
         super().__init__(
             hass,
             _LOGGER,
@@ -28,7 +28,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
 
         self._min_delay = 0.2   # минимальная задержка в секундах
         self._max_delay = 5.0   # максимальная задержка
-        self._delay_multiplier = 1.4 # коэффициент задержки
+        self._delay_multiplier = delay_multiplier # коэффициент задержки
 
  
     async def _async_update_data(self):

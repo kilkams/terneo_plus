@@ -7,7 +7,8 @@
         "data": {
           "mode": "Setup Mode",
           "host": "IP Address",
-          "scan_interval": "Scan Interval (seconds)"
+          "scan_interval": "Scan Interval (seconds)",
+          "delay_multiplier": "Request delay multiplier"
         }
       },
       "discover_broadcast": {
@@ -16,7 +17,12 @@
         "data": {
           "port": "UDP Port",
           "timeout": "Timeout (seconds)",
-          "scan_interval": "Scan Interval (seconds)"
+          "scan_interval": "Scan Interval (seconds)",
+          "delay_multiplier": "Request delay multiplier"
+        },
+        "data_description": {
+          "scan_interval": "How often to update data from device (5-300 seconds)",
+          "delay_multiplier": "Multiplier for delays between API requests (0.5-5.0, recommended: 1.0-2.0)"
         }
       }
     },
@@ -35,7 +41,8 @@
       "init": {
         "title": "Terneo BX Options",
         "data": {
-          "scan_interval": "Scan Interval (seconds)"
+          "scan_interval": "Scan Interval (seconds)",
+          "delay_multiplier": "Request delay multiplier"
         }
       }
     }
