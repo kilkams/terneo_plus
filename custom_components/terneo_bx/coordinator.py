@@ -9,7 +9,7 @@ _LOGGER = logging.getLogger(__name__)
 class TerneoCoordinator(DataUpdateCoordinator):
     """Coordinator for Terneo BX."""
 
-    def __init__(self, hass, api, update_interval, serial, host):
+    def __init__(self, hass, api, update_interval, serial, host, delay_multiplier=1.5):
         super().__init__(
             hass,
             _LOGGER,
@@ -19,7 +19,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
         self.api = api
         self.serial = serial
         self.host = host
-         
+          
         # Кэш для редко меняющихся данных
         self._cached_schedule = {}
         self._cached_time = {}
@@ -28,7 +28,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
 
         self._min_delay = 0.2   # минимальная задержка в секундах
         self._max_delay = 5.0   # максимальная задержка
-        self._delay_multiplier = 1.4 # коэффициент задержки
+        self._delay_multiplier = delay_multiplier # коэффициент задержки
 
  
     async def _async_update_data(self):
@@ -53,7 +53,7 @@ class TerneoCoordinator(DataUpdateCoordinator):
                 raise UpdateFailed(f"Failed to read params and no cached data: {e}")
 
         await asyncio.sleep(self.calc_delay())
- 
+  
         # 2) Время (некритичные данные)
         if self._time_update_counter >= 20:        
             try:

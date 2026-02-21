@@ -7,7 +7,8 @@
         "data": {
           "mode": "Режим настройки",
           "host": "IP адрес",
-          "scan_interval": "Интервал опроса (секунды)"
+          "scan_interval": "Интервал опроса (секунды)",
+          "delay_multiplier": "Множитель задержки запросов"
         }
       },
       "discover_broadcast": {
@@ -16,7 +17,12 @@
         "data": {
           "port": "UDP порт",
           "timeout": "Таймаут (секунды)",
-          "scan_interval": "Интервал опроса (секунды)"
+          "scan_interval": "Интервал опроса (секунды)",
+          "delay_multiplier": "Множитель задержки запросов"
+        },
+        "data_description": {
+          "scan_interval": "Как часто обновлять данные с устройства (5-300 секунд)",
+          "delay_multiplier": "Множитель для задержек между API запросами (0.5-5.0, рекомендуется: 1.0-2.0)"
         }
       }
     },
@@ -28,14 +34,15 @@
     },
     "abort": {
       "already_configured": "Устройство уже настроено"
-    }
+    } 
   },
   "options": {
     "step": {
       "init": {
         "title": "Настройки Terneo BX",
         "data": {
-          "scan_interval": "Интервал опроса (секунды)"
+          "scan_interval": "Интервал опроса (секунды)",
+          "delay_multiplier": "Множитель задержки запросов"
         }
       }
     }
