@@ -5,7 +5,7 @@ from .api import TerneoApi
 
 class TerneoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 2
-
+ 
     async def async_step_user(self, user_input=None):
         errors = {}
         if user_input is not None:
