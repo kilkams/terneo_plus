@@ -1,6 +1,6 @@
 DOMAIN = "terneo_bx"
-DEFAULT_SCAN_INTERVAL = 30
-DEFAULT_DELAY_MULTIPLIER = 1.4  # коэффициент задержки между запросами
+DEFAULT_SCAN_INTERVAL = 60
+DEFAULT_DELAY_MULTIPLIER = 1.5  # коэффициент задержки между запросами
 API_ENDPOINT = "/api.cgi"
 CMD_TELEMETRY = 4
 CMD_PARAMS = 1
